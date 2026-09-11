@@ -23,7 +23,7 @@ export default function DropTypeSelector({ value, onChange }: DropTypeSelectorPr
               style={{
                 background: selected ? 'var(--ink)' : bg,
                 color: selected ? 'var(--bg-panel)' : 'var(--ink)',
-                boxShadow: selected ? '4px 4px 0 var(--ink-mute)' : '2px 2px 0 var(--ink)',
+                boxShadow: selected ? '6px 6px 0 var(--ink)' : '2px 2px 0 var(--ink)',
               }}
             >
               <Icon size={28} strokeWidth={2} />
