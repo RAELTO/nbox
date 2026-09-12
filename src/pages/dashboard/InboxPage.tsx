@@ -164,7 +164,6 @@ function ThreadPanel({ conversationId, userId, otherId, otherName, otherUsername
         conversationId={conversationId}
         userId={userId}
         onAttach={() => toast('Attachments coming soon')}
-        onEmoji={() => toast('Emojis coming soon')}
       />
       {voiceSettingsOpen && (
         <VoiceNoteConversationSettings
@@ -279,6 +278,7 @@ export default function InboxPage() {
         {/* ── Thread / Empty state ── */}
         {activeConv ? (
           <ThreadPanel
+            key={activeConv.id}
             conversationId={activeConv.id}
             userId={user?.id ?? ''}
             otherId={activeConv.other.id}

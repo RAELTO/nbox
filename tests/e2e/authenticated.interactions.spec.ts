@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
+import { expect, test, type Page } from '@playwright/test'
 import { openAuthenticatedPage, openFollowableProfile } from './support/app'
 import { credentialsFor, projectAuthRole } from './support/auth'
 
@@ -6,6 +7,20 @@ test.beforeEach(({}, testInfo) => {
   const role = projectAuthRole(testInfo.project.metadata)
   test.skip(!credentialsFor(role), `Local credentials are not configured for the ${role} role`)
 })
+
+async function openFirstConversation(page: Page) {
+  await openAuthenticatedPage(page, '/nbox')
+  await expect(page.locator('.chat-list-loading')).toBeHidden({ timeout: 15_000 })
+
+  const conversations = page.locator('.chat-item-open')
+  await expect.poll(() => conversations.count(), { timeout: 5_000 }).toBeGreaterThan(0).catch(() => {})
+  test.skip(await conversations.count() === 0, 'This test user has no conversations')
+
+  await conversations.first().click()
+  const composer = page.locator('.chat-thread .chat-composer:not(.compact)')
+  await expect(composer).toBeVisible()
+  return composer
+}
 
 test('@smoke reaction menus work without hover', async ({ page }) => {
   await openAuthenticatedPage(page)
@@ -43,6 +58,84 @@ test('@smoke contacts expose follow controls at every viewport', async ({ page }
   await expect.poll(() => followButtons.count(), { timeout: 5_000 }).toBeGreaterThan(0).catch(() => {})
   test.skip(await followButtons.count() === 0, 'This test user has no contacts')
   await expect(followButtons.first()).toBeVisible()
+})
+
+test('@smoke emoji picker inserts a native emoji at every viewport', async ({ page }, testInfo) => {
+  const composer = await openFirstConversation(page)
+  const input = composer.getByRole('textbox', { name: 'Message' })
+
+  await input.fill('Hello world')
+  await input.evaluate(element => (element as HTMLInputElement).setSelectionRange(6, 6))
+  await composer.getByRole('button', { name: 'Choose emoji' }).click()
+
+  const picker = page.getByRole('dialog', { name: 'Emoji picker' })
+  await expect(picker).toBeVisible()
+  await expect(picker.getByRole('button', { name: /grinning face/i }).first()).toBeVisible()
+  await expect(picker).toBeInViewport()
+  await picker.screenshot({ path: testInfo.outputPath('emoji-picker.png') })
+
+  const accessibility = await new AxeBuilder({ page }).include('.emoji-picker-popover').analyze()
+  const blocking = accessibility.violations.filter(violation => (
+    violation.impact === 'critical' || violation.impact === 'serious'
+  ))
+  expect(blocking, 'The emoji picker should have no serious accessibility violations').toEqual([])
+
+  await picker.getByRole('button', { name: /grinning face/i }).first().click()
+  await expect(input).toHaveValue('Hello 😀world')
+  await expect(picker).toHaveCount(0)
+  await expect(input).toBeFocused()
+
+  const focusStyle = await input.evaluate(element => {
+    const style = getComputedStyle(element)
+    return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow }
+  })
+  expect(focusStyle.outlineStyle).toBe('none')
+  expect(focusStyle.boxShadow).not.toBe('none')
+
+  await composer.getByRole('button', { name: 'Choose emoji' }).click()
+  await expect(page.getByRole('dialog', { name: 'Emoji picker' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Emoji picker' })).toHaveCount(0)
+  await expect(composer.getByRole('button', { name: 'Choose emoji' })).toBeFocused()
+})
+
+test('@smoke desktop floating chat keeps the clean red input focus', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-1440')
+  await openAuthenticatedPage(page)
+  const openContact = page.locator('.sidebar-contact-open').first()
+  await openContact.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => {})
+  test.skip(!await openContact.isVisible().catch(() => false), 'This test user has no sidebar contact')
+
+  const conversationId = '66666666-6666-4666-8666-666666666666'
+  await page.route('**/rest/v1/conversations*', async route => {
+    const url = new URL(route.request().url())
+    if (url.searchParams.has('user_a') && url.searchParams.has('user_b')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: conversationId }) })
+      return
+    }
+    await route.continue()
+  })
+  await page.route('**/rest/v1/messages*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    headers: { 'Content-Range': '*/0' },
+    body: '[]',
+  }))
+
+  await openContact.click()
+  const composer = page.locator('.float-chat .chat-composer.compact')
+  const input = composer.getByRole('textbox', { name: 'Message' })
+  await expect(composer).toBeVisible()
+  await input.focus()
+
+  const focusStyle = await input.evaluate(element => {
+    const style = getComputedStyle(element)
+    return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow }
+  })
+  expect(focusStyle.outlineStyle).toBe('none')
+  expect(focusStyle.boxShadow).not.toBe('none')
+  await expect(composer.getByRole('button', { name: 'Choose emoji' })).toBeVisible()
+  await composer.screenshot({ path: testInfo.outputPath('floating-chat-clean-focus.png') })
 })
 
 test('@mutation poll selection persists after reload and can be restored', async ({ page }, testInfo) => {
