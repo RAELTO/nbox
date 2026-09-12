@@ -124,7 +124,9 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [x] Obligar la publicación por RPC atómico validado; impedir inserciones directas de audio y mantener el privilegio fuera del esquema público
 - [x] Integrar el flujo compartido en Inbox y chat flotante sin duplicar lógica
 - [x] Verificar accesibilidad y responsive en desktop, tablet y móvil con Playwright
-- [ ] Validar manualmente micrófono y reproducción en navegadores/dispositivos reales
+- [x] Evitar solicitudes de micrófono concurrentes por taps rápidos y cancelar respuestas obsoletas al cerrar o cambiar de chat
+- [ ] Revalidar manualmente permiso, grabación y reproducción en Chrome Android con el build corregido
+- [ ] Validar manualmente micrófono y reproducción en navegadores/dispositivos reales adicionales
 
 #### Fase siguiente — políticas para deshabilitar notas de voz
 - [x] Preferencia global del usuario para recibir notas de voz

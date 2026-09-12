@@ -39,6 +39,8 @@ export function useVoiceRecorder() {
   const cancelledRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const requestIdRef = useRef(0)
+  const startPendingRef = useRef(false)
 
   const [phase, setPhase] = useState<VoiceRecorderPhase>('idle')
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -66,6 +68,8 @@ export function useVoiceRecorder() {
   }, [])
 
   const discard = useCallback(() => {
+    requestIdRef.current += 1
+    startPendingRef.current = false
     cancelledRef.current = true
     clearTimer()
     const recorder = recorderRef.current
@@ -94,13 +98,16 @@ export function useVoiceRecorder() {
       setPhase('error')
       return
     }
-    if (activeRecorderOwner && activeRecorderOwner !== ownerRef.current) {
+    if (startPendingRef.current || activeRecorderOwner === ownerRef.current) return
+    if (activeRecorderOwner) {
       setError('Finish or cancel the voice note open in another chat first.')
       setPhase('error')
       return
     }
 
     discard()
+    const requestId = ++requestIdRef.current
+    startPendingRef.current = true
     setPhase('requesting')
     activeRecorderOwner = ownerRef.current
 
@@ -112,6 +119,10 @@ export function useVoiceRecorder() {
           autoGainControl: true,
         },
       })
+      if (requestId !== requestIdRef.current) {
+        stream.getTracks().forEach(track => track.stop())
+        return
+      }
       streamRef.current = stream
       const preferred = selectVoiceFormat()
       let recorder: MediaRecorder
@@ -186,10 +197,13 @@ export function useVoiceRecorder() {
         if (elapsed >= MAX_VOICE_DURATION_MS && recorder.state !== 'inactive') recorder.stop()
       }, 250)
     } catch (cause) {
+      if (requestId !== requestIdRef.current) return
       clearTimer()
       releaseStream()
       setError(microphoneError(cause))
       setPhase('error')
+    } finally {
+      if (requestId === requestIdRef.current) startPendingRef.current = false
     }
   }, [clearTimer, discard, isSupported, releaseStream, revokePreview])
 
@@ -199,6 +213,8 @@ export function useVoiceRecorder() {
   }, [draft])
 
   useEffect(() => () => {
+    requestIdRef.current += 1
+    startPendingRef.current = false
     cancelledRef.current = true
     clearTimer()
     if (recorderRef.current?.state !== 'inactive') recorderRef.current?.stop()

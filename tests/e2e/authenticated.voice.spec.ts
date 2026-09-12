@@ -8,12 +8,13 @@ type MediaMode = 'available' | 'denied'
 interface MockVoiceCapabilityState {
   allowed: boolean
   calls: number
+  delayMs: number
 }
 
 const voiceCapabilities = new WeakMap<Page, MockVoiceCapabilityState>()
 
-async function installFakeVoiceMedia(page: Page, mode: MediaMode) {
-  await page.addInitScript(({ mediaMode }) => {
+async function installFakeVoiceMedia(page: Page, mode: MediaMode, delayMs = 0) {
+  await page.addInitScript(({ mediaMode, mediaDelayMs }) => {
     const mediaState = { getUserMediaCalls: 0, stoppedTracks: 0 }
 
     class FakeMediaRecorder extends EventTarget {
@@ -59,6 +60,9 @@ async function installFakeVoiceMedia(page: Page, mode: MediaMode) {
       value: {
         getUserMedia: async () => {
           mediaState.getUserMediaCalls += 1
+          if (mediaDelayMs > 0) {
+            await new Promise(resolve => window.setTimeout(resolve, mediaDelayMs))
+          }
           if (mediaMode === 'denied') {
             throw new DOMException('Permission denied by the test', 'NotAllowedError')
           }
@@ -71,7 +75,7 @@ async function installFakeVoiceMedia(page: Page, mode: MediaMode) {
         },
       },
     })
-  }, { mediaMode: mode })
+  }, { mediaMode: mode, mediaDelayMs: delayMs })
 }
 
 async function openFirstConversation(page: Page) {
@@ -98,10 +102,13 @@ test.beforeEach(async ({ page }, testInfo) => {
   const role = projectAuthRole(testInfo.project.metadata)
   test.skip(!credentialsFor(role), `Local credentials are not configured for the ${role} role`)
 
-  const capability = { allowed: true, calls: 0 }
+  const capability = { allowed: true, calls: 0, delayMs: 0 }
   voiceCapabilities.set(page, capability)
   await page.route('**/rest/v1/rpc/get_voice_note_permission', async route => {
     capability.calls += 1
+    if (capability.delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, capability.delayMs))
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -204,6 +211,44 @@ test('@voice records, previews, and discards without uploading', async ({ page }
     window as typeof window & { __voiceTest: { getUserMediaCalls: number; stoppedTracks: number } }
   ).__voiceTest)
   expect(state).toEqual({ getUserMediaCalls: 1, stoppedTracks: 1 })
+})
+
+test('@voice coalesces rapid microphone taps into one browser permission request', async ({ page }) => {
+  const capability = voiceCapabilities.get(page)
+  if (!capability) throw new Error('Voice capability mock was not installed')
+  capability.delayMs = 150
+  await installFakeVoiceMedia(page, 'available', 150)
+  const composer = await openFirstConversation(page)
+  const microphone = composer.getByRole('button', { name: 'Record voice message' })
+  await expect(microphone).toBeEnabled()
+
+  await microphone.dispatchEvent('click')
+  await microphone.dispatchEvent('click')
+
+  await expect(composer.getByRole('button', { name: 'Stop voice recording' })).toBeVisible()
+  const state = await page.evaluate(() => (
+    window as typeof window & { __voiceTest: { getUserMediaCalls: number } }
+  ).__voiceTest)
+  expect(state.getUserMediaCalls).toBe(1)
+
+  await composer.getByRole('button', { name: 'Cancel voice recording' }).click()
+})
+
+test('@voice ignores a microphone response that arrives after cancellation', async ({ page }) => {
+  await installFakeVoiceMedia(page, 'available', 250)
+  const composer = await openFirstConversation(page)
+  const microphone = composer.getByRole('button', { name: 'Record voice message' })
+  await expect(microphone).toBeEnabled()
+
+  await microphone.click()
+  await expect(composer).toContainText('CONNECTING MIC')
+  await composer.getByRole('button', { name: 'Cancel voice recording' }).click()
+
+  await expect(composer.getByRole('button', { name: 'Record voice message' })).toBeVisible()
+  await expect(composer.getByRole('button', { name: 'Stop voice recording' })).toHaveCount(0)
+  await expect.poll(async () => page.evaluate(() => (
+    window as typeof window & { __voiceTest: { stoppedTracks: number } }
+  ).__voiceTest.stoppedTracks)).toBe(1)
 })
 
 test('@voice reports denied microphone permission and recovers', async ({ page }) => {

@@ -28,7 +28,10 @@ export default function ChatComposer({
 }: ChatComposerProps) {
   const [text, setText] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
+  const [isPreparingVoice, setIsPreparingVoice] = useState(false)
   const stopButtonRef = useRef<HTMLButtonElement>(null)
+  const voiceStartPendingRef = useRef(false)
+  const voiceStartAttemptRef = useRef(0)
   const sendText = useSendMessage(conversationId, userId)
   const sendVoice = useSendVoiceMessage(conversationId, userId)
   const voice = useVoiceRecorder()
@@ -37,6 +40,11 @@ export default function ChatComposer({
   useEffect(() => {
     if (voice.phase === 'recording') stopButtonRef.current?.focus({ preventScroll: true })
   }, [voice.phase])
+
+  useEffect(() => () => {
+    voiceStartAttemptRef.current += 1
+    voiceStartPendingRef.current = false
+  }, [])
 
   async function handleTextSend() {
     const body = text.trim()
@@ -64,17 +72,29 @@ export default function ChatComposer({
   }
 
   async function handleVoiceStart() {
+    if (voiceStartPendingRef.current) return
+    voiceStartPendingRef.current = true
+    const attempt = ++voiceStartAttemptRef.current
+    setIsPreparingVoice(true)
     setSendError(null)
-    const result = await voicePermission.refetch()
-    if (result.isError) {
-      setSendError('Could not verify whether this chat accepts voice notes. Try again.')
-      return
+    try {
+      const result = await voicePermission.refetch()
+      if (attempt !== voiceStartAttemptRef.current) return
+      if (result.isError) {
+        setSendError('Could not verify whether this chat accepts voice notes. Try again.')
+        return
+      }
+      if (!result.data?.allowed) {
+        setSendError(VOICE_NOTES_BLOCKED_MESSAGE)
+        return
+      }
+      await voice.start()
+    } finally {
+      if (attempt === voiceStartAttemptRef.current) {
+        voiceStartPendingRef.current = false
+        setIsPreparingVoice(false)
+      }
     }
-    if (!result.data?.allowed) {
-      setSendError(VOICE_NOTES_BLOCKED_MESSAGE)
-      return
-    }
-    await voice.start()
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -176,7 +196,7 @@ export default function ChatComposer({
           type="button"
           className="chat-composer-mic"
           onClick={() => void handleVoiceStart()}
-          disabled={!voice.isSupported || voicePermission.isLoading || voicePermission.data?.allowed === false || voicePermission.isError}
+          disabled={!voice.isSupported || isPreparingVoice || voicePermission.isFetching || voicePermission.data?.allowed === false || voicePermission.isError}
           aria-label={voicePermission.data?.allowed === false
             ? 'Voice notes are disabled by the recipient'
             : voice.isSupported ? 'Record voice message' : 'Voice recording unavailable'}
@@ -184,7 +204,7 @@ export default function ChatComposer({
             ? VOICE_NOTES_BLOCKED_MESSAGE
             : voice.isSupported ? 'Record voice message' : 'Voice recording is not supported by this browser'}
         >
-          {voicePermission.isLoading
+          {isPreparingVoice || voicePermission.isFetching
             ? <LoaderCircle className="voice-spinner" size={17} aria-hidden="true" />
             : <Mic size={17} strokeWidth={2.7} aria-hidden="true" />}
         </button>
