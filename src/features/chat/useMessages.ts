@@ -8,14 +8,33 @@ export interface MessageRow {
   conversation_id: string
   sender_id: string
   body: string
-  kind: 'text' | 'image' | 'system'
+  kind: 'text' | 'image' | 'voice' | 'system'
   created_at: string
   edited_at: string | null
   deleted_at: string | null
   sender: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_url'>
+  attachments: MessageAttachmentRow[]
   // local-only state for optimistic updates
   status?: 'sending' | 'sent' | 'failed'
 }
+
+export interface MessageAttachmentRow {
+  id: string
+  message_id: string
+  kind: 'voice' | 'image' | 'video' | 'file'
+  storage_path: string
+  mime_type: string
+  size_bytes: number
+  duration_ms: number | null
+  position: number
+  created_at: string
+}
+
+export const MESSAGE_SELECT = `
+  *,
+  sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url),
+  attachments:message_attachments(id, message_id, kind, storage_path, mime_type, size_bytes, duration_ms, position, created_at)
+`
 
 export function useMessages(conversationId: string | undefined, userId: string | undefined) {
   const qc = useQueryClient()
@@ -57,7 +76,7 @@ export function useMessages(conversationId: string | undefined, userId: string |
       if (!conversationId) return []
       const { data, error } = await supabase
         .from('messages')
-        .select('*, sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)')
+        .select(MESSAGE_SELECT)
         .eq('conversation_id', conversationId)
         .is('deleted_at', null)
         .order('created_at', { ascending: true })
@@ -77,7 +96,7 @@ export function useSendMessage(conversationId: string, userId: string) {
       const { data, error } = await supabase
         .from('messages')
         .insert({ conversation_id: conversationId, sender_id: userId, body: body.trim() })
-        .select('*, sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url)')
+        .select(MESSAGE_SELECT)
         .single()
       if (error) throw error
       return data as unknown as MessageRow

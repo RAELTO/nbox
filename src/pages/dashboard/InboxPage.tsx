@@ -1,14 +1,17 @@
 import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Paperclip, Send, Phone, Video, Smile, ArrowLeft, Mail } from 'lucide-react'
+import { Phone, Video, ArrowLeft, AudioLines, Mail } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useConversations } from '../../features/chat/useConversations'
-import { useMessages, useSendMessage } from '../../features/chat/useMessages'
+import { useMessages } from '../../features/chat/useMessages'
 import { usePresence, usePresenceMap } from '../../features/presence/usePresence'
 import AppShell from '../../components/layout/AppShell'
 import LeftSidebar from '../../components/layout/LeftSidebar'
 import RightSidebar from '../../components/layout/RightSidebar'
 import { useToast } from '../../components/ui/Toast'
+import ChatComposer from '../../components/chat/ChatComposer'
+import ChatMessageBubble from '../../components/chat/ChatMessageBubble'
+import VoiceNoteConversationSettings from '../../components/chat/VoiceNoteConversationSettings'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -84,23 +87,15 @@ function ThreadPanel({ conversationId, userId, otherId, otherName, otherUsername
   otherName: string; otherUsername: string; onBack: () => void
 }) {
   const { data: messages = [] } = useMessages(conversationId, userId)
-  const send     = useSendMessage(conversationId, userId)
   const presence = usePresence(otherId)
   const toast    = useToast()
-  const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const voiceSettingsButtonRef = useRef<HTMLButtonElement>(null)
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
-
-  async function handleSend() {
-    const body = draft.trim(); if (!body) return
-    setDraft(''); await send.mutateAsync(body)
-  }
-  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') handleSend()
-  }
 
   return (
     <main className="chat-thread">
@@ -123,6 +118,18 @@ function ThreadPanel({ conversationId, userId, otherId, otherName, otherUsername
           </div>
         </Link>
         <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            ref={voiceSettingsButtonRef}
+            type="button"
+            className="inbox-action-btn"
+            title="Voice note settings"
+            aria-label="Voice note settings"
+            aria-haspopup="dialog"
+            aria-expanded={voiceSettingsOpen}
+            onClick={() => setVoiceSettingsOpen(true)}
+          >
+            <AudioLines size={16} strokeWidth={2.7} aria-hidden="true" />
+          </button>
           <ActionBtn title="Call" onClick={() => toast('Calls coming soon')}>
             <Phone size={15} strokeWidth={2.5} />
           </ActionBtn>
@@ -145,10 +152,7 @@ function ThreadPanel({ conversationId, userId, otherId, otherName, otherUsername
           return (
             <div key={m.id} className="chat-msg-row">
               {showSep && <div className="chat-day-sep">{day}</div>}
-              <div className={`msg-bubble ${isMe ? 'me' : 'them'}`}>
-                <div style={{ fontSize: 14 }}>{m.body}</div>
-                <div className="msg-time">{msgTime(m.created_at)}{isMe && ' ✓✓'}</div>
-              </div>
+              <ChatMessageBubble message={m} isMine={isMe} time={msgTime(m.created_at)} />
             </div>
           )
         })}
@@ -156,30 +160,21 @@ function ThreadPanel({ conversationId, userId, otherId, otherName, otherUsername
       </div>
 
       {/* Input */}
-      <div className="chat-input">
-        <ActionBtn title="Attach" onClick={() => toast('Attachments coming soon')}>
-          <Paperclip size={14} strokeWidth={2.5} />
-        </ActionBtn>
-        <input
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Message…"
-          className="chat-input-field"
+      <ChatComposer
+        conversationId={conversationId}
+        userId={userId}
+        onAttach={() => toast('Attachments coming soon')}
+        onEmoji={() => toast('Emojis coming soon')}
+      />
+      {voiceSettingsOpen && (
+        <VoiceNoteConversationSettings
+          conversationId={conversationId}
+          userId={userId}
+          otherName={otherName}
+          onClose={() => setVoiceSettingsOpen(false)}
+          anchorRef={voiceSettingsButtonRef}
         />
-        <ActionBtn title="Emoji" onClick={() => toast('Emojis coming soon')}>
-          <Smile size={14} strokeWidth={2.5} />
-        </ActionBtn>
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!draft.trim() || send.isPending}
-          className="chat-send-btn"
-          style={{ cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: !draft.trim() ? .4 : 1 }}
-        >
-          <Send size={15} strokeWidth={2.5} />
-        </button>
-      </div>
+      )}
     </main>
   )
 }

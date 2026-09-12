@@ -21,6 +21,7 @@ export type Database = {
           avatar_url: string | null
           role: string
           is_banned: boolean
+          voice_notes_enabled: boolean
           last_seen_at: string | null
           created_at: string
           updated_at: string
@@ -33,6 +34,7 @@ export type Database = {
           avatar_url?: string | null
           role?: string
           is_banned?: boolean
+          voice_notes_enabled?: boolean
           last_seen_at?: string | null
           created_at?: string
           updated_at?: string
@@ -45,6 +47,7 @@ export type Database = {
           avatar_url?: string | null
           role?: string
           is_banned?: boolean
+          voice_notes_enabled?: boolean
           last_seen_at?: string | null
           created_at?: string
           updated_at?: string
@@ -300,18 +303,46 @@ export type Database = {
         ]
       }
       conversation_participants: {
-        Row: { conversation_id: string; user_id: string; last_read_at: string | null; archived_at: string | null; deleted_at: string | null }
-        Insert: { conversation_id: string; user_id: string; last_read_at?: string | null; archived_at?: string | null; deleted_at?: string | null }
-        Update: { last_read_at?: string | null; archived_at?: string | null; deleted_at?: string | null }
+        Row: { conversation_id: string; user_id: string; last_read_at: string | null; archived_at: string | null; deleted_at: string | null; voice_notes_mode: 'inherit' | 'allow' | 'block' }
+        Insert: { conversation_id: string; user_id: string; last_read_at?: string | null; archived_at?: string | null; deleted_at?: string | null; voice_notes_mode?: 'inherit' | 'allow' | 'block' }
+        Update: { last_read_at?: string | null; archived_at?: string | null; deleted_at?: string | null; voice_notes_mode?: 'inherit' | 'allow' | 'block' }
         Relationships: []
       }
       messages: {
-        Row: { id: string; conversation_id: string; sender_id: string; body: string; kind: 'text' | 'image' | 'system'; created_at: string; edited_at: string | null; deleted_at: string | null }
-        Insert: { id?: string; conversation_id: string; sender_id: string; body: string; kind?: 'text' | 'image' | 'system'; created_at?: string; edited_at?: string | null; deleted_at?: string | null }
+        Row: { id: string; conversation_id: string; sender_id: string; body: string; kind: 'text' | 'image' | 'voice' | 'system'; created_at: string; edited_at: string | null; deleted_at: string | null }
+        Insert: { id?: string; conversation_id: string; sender_id: string; body: string; kind?: 'text' | 'image' | 'voice' | 'system'; created_at?: string; edited_at?: string | null; deleted_at?: string | null }
         Update: { body?: string; edited_at?: string | null; deleted_at?: string | null }
         Relationships: [
           { foreignKeyName: 'messages_sender_id_fkey'; columns: ['sender_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
           { foreignKeyName: 'messages_conversation_id_fkey'; columns: ['conversation_id']; referencedRelation: 'conversations'; referencedColumns: ['id'] }
+        ]
+      }
+      message_attachments: {
+        Row: {
+          id: string
+          message_id: string
+          kind: 'voice' | 'image' | 'video' | 'file'
+          storage_path: string
+          mime_type: string
+          size_bytes: number
+          duration_ms: number | null
+          position: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          kind: 'voice' | 'image' | 'video' | 'file'
+          storage_path: string
+          mime_type: string
+          size_bytes: number
+          duration_ms?: number | null
+          position?: number
+          created_at?: string
+        }
+        Update: never
+        Relationships: [
+          { foreignKeyName: 'message_attachments_message_id_fkey'; columns: ['message_id']; referencedRelation: 'messages'; referencedColumns: ['id'] }
         ]
       }
       contact_requests: {
@@ -469,6 +500,22 @@ export type Database = {
       accept_contact_request: {
         Args: { p_request_id: string }
         Returns: void
+      }
+      get_voice_note_permission: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
+      create_voice_message: {
+        Args: {
+          p_message_id: string
+          p_attachment_id: string
+          p_conversation_id: string
+          p_storage_path: string
+          p_mime_type: string
+          p_size_bytes: number
+          p_duration_ms: number
+        }
+        Returns: string
       }
     }
     Enums: Record<string, never>

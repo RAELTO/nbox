@@ -10,6 +10,7 @@ export interface Profile {
   avatar_url: string | null
   role: 'user' | 'admin'
   is_banned: boolean
+  voice_notes_enabled?: boolean
 }
 
 export interface ProfileFormData {
@@ -25,7 +26,7 @@ export function useProfile(userId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, username, bio, avatar_url, role, is_banned')
+        .select('id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled')
         .eq('id', userId!)
         .single()
       if (error) throw error
