@@ -16,13 +16,18 @@ function getPopoverStyle(anchor: HTMLButtonElement | null): CSSProperties {
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
   const anchorRect = anchor?.getBoundingClientRect()
-  const width = Math.min(352, viewportWidth - 16)
+  const isMobile = viewportWidth <= 600
+  const horizontalInset = isMobile ? 12 : 8
+  const width = Math.min(352, viewportWidth - (horizontalInset * 2))
   const availableAbove = Math.max(260, (anchorRect?.top ?? viewportHeight) - margin - 8)
   const height = Math.min(410, availableAbove)
-  const left = Math.max(8, Math.min(
-    (anchorRect?.right ?? viewportWidth - 8) - width,
-    viewportWidth - width - 8,
+  const anchoredLeft = Math.max(horizontalInset, Math.min(
+    (anchorRect?.right ?? viewportWidth - horizontalInset) - width,
+    viewportWidth - width - horizontalInset,
   ))
+  const left = isMobile
+    ? Math.round((viewportWidth - width) / 2)
+    : anchoredLeft
   const top = Math.max(8, (anchorRect?.top ?? viewportHeight) - height - margin)
 
   return { width, height, left, top }
@@ -73,6 +78,10 @@ export default function EmojiPickerPopover({ anchorRef, onSelect, onClose }: Emo
     const normalizeSearchAria = () => {
       const search = panel.querySelector<HTMLInputElement>('input[aria-controls="epr-search-id"]')
       if (search && !panel.querySelector('#epr-search-id')) search.removeAttribute('aria-controls')
+
+      panel.querySelectorAll<HTMLButtonElement>('.epr-tone[aria-label]').forEach((button) => {
+        button.title = button.getAttribute('aria-label') ?? ''
+      })
     }
     const observer = new MutationObserver(normalizeSearchAria)
     observer.observe(panel, { childList: true, subtree: true })

@@ -72,7 +72,20 @@ test('@smoke emoji picker inserts a native emoji at every viewport', async ({ pa
   await expect(picker).toBeVisible()
   await expect(picker.getByRole('button', { name: /grinning face/i }).first()).toBeVisible()
   await expect(picker).toBeInViewport()
+
+  const skinToneButton = picker.getByRole('button', { name: /skin tone neutral/i })
+  await expect(skinToneButton).toHaveAttribute('title', /skin tone neutral/i)
+
+  const viewportWidth = page.viewportSize()?.width ?? 0
+  if (viewportWidth <= 600) {
+    const pickerBounds = await picker.boundingBox()
+    expect(pickerBounds).not.toBeNull()
+    const pickerCenter = (pickerBounds?.x ?? 0) + ((pickerBounds?.width ?? 0) / 2)
+    expect(Math.abs(pickerCenter - (viewportWidth / 2))).toBeLessThanOrEqual(1)
+  }
+
   await picker.screenshot({ path: testInfo.outputPath('emoji-picker.png') })
+  await page.screenshot({ path: testInfo.outputPath('emoji-picker-page.png') })
 
   const accessibility = await new AxeBuilder({ page }).include('.emoji-picker-popover').analyze()
   const blocking = accessibility.violations.filter(violation => (

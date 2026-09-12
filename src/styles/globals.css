@@ -2349,6 +2349,21 @@ button.box-action { background: none; border: none; font: inherit; }
   --epr-category-label-text-color: var(--ink);
   --epr-category-icon-active-color: var(--accent-1);
 }
+.emoji-picker-popover .epr-skin-tones {
+  position: relative;
+}
+.emoji-picker-popover .epr-skin-tones::before {
+  content: "SKIN TONE";
+  position: absolute;
+  right: 0;
+  top: -7px;
+  color: var(--muted);
+  font: 900 7px/1 var(--font-mono);
+  letter-spacing: .05em;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-100%);
+}
 
 @media (max-width: 600px) {
   .emoji-picker-popover { box-shadow: 5px 5px 0 var(--ink); }
