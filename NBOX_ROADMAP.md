@@ -34,6 +34,7 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [x] Mobile bottom bar (≤820px): Home / Explore / Drop / Notifs / Yo
 - [x] `/yo` MenuPage: acceso rápido a Saved, Contacts, Groups (stub)
 - [x] Responsive full (mobile ≤600 / tablet ≤960 / desktop >960)
+- [x] Fondo vectorial repetible con doodles propios de NBOX, adaptable a paletas y modo oscuro
 
 ### Drops (boxes)
 - [x] 6 tipos: Quick · Media · Poll · Mood · Link · Thread
@@ -115,6 +116,31 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 ### Inbox
 - [ ] Adjuntos, emojis, llamadas — stubs "coming soon"
 
+### Notas de voz en chat — fase directa completada
+- [x] Definir arquitectura: audio en Storage privado, metadatos en Postgres y borrador local
+- [x] Crear `message_attachments`, bucket privado `chat-media`, límites MIME/tamaño y RLS por participante
+- [x] Implementar grabación web con detección de formato, temporizador, cancelar y previsualización
+- [x] Implementar subida, mensaje `voice`, reproducción bajo demanda y limpieza ante errores
+- [x] Obligar la publicación por RPC atómico validado; impedir inserciones directas de audio y mantener el privilegio fuera del esquema público
+- [x] Integrar el flujo compartido en Inbox y chat flotante sin duplicar lógica
+- [x] Verificar accesibilidad y responsive en desktop, tablet y móvil con Playwright
+- [ ] Validar manualmente micrófono y reproducción en navegadores/dispositivos reales
+
+#### Fase siguiente — políticas para deshabilitar notas de voz
+- [x] Preferencia global del usuario para recibir notas de voz
+- [x] Excepción por conversación: `inherit | allow | block`
+- [x] En chat directo, validar antes de grabar y antes de subir; cancelar sin subir si el destinatario las bloqueó
+- [x] Mostrar al remitente un aviso local: el destinatario deshabilitó las notas para ese chat
+- [x] Revalidar atómicamente al publicar y limpiar el archivo si la preferencia cambió durante el envío
+- [x] Mantener en chat directo la precedencia: excepción personal → preferencia global → permitir
+- [x] Probar bloqueo, continuidad del texto, preferencias, carreras y UI accesible en cinco viewports con Playwright
+- [ ] En grupos, permitir únicamente a administradores deshabilitar el envío para todo el grupo
+- [ ] En grupos, permitir bloqueo personal: mostrar placeholder y no descargar el audio para ese miembro
+- [ ] Registrar cambios administrativos como eventos de sistema protegidos contra suplantación
+- [ ] Extender a grupos la precedencia: bloqueo administrativo → excepción personal → preferencia global → permitir
+
+**Contrato vigente para chats directos:** la preferencia de la persona receptora decide si admite audio. La excepción del chat puede heredar, permitir o bloquear y prevalece sobre el valor global. El remitente consulta antes de abrir el micrófono y vuelve a consultar antes de subir; la RPC revalida bajo bloqueo transaccional para cerrar carreras. Si la preferencia cambia después de subir, la publicación se rechaza, el objeto se elimina y el borrador local se conserva. Los mensajes de texto permanecen disponibles en todos los casos.
+
 ### Notificaciones
 - [x] Persistencia de lectura individual y masiva en `read_at`
 - [ ] Sustituir el auto-read al abrir por acciones explícitas "Mark read" y "Mark all read"
@@ -181,7 +207,7 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 4. **Saved Collections backend** — Tabla, RLS y UI responsive
 5. **Ranking `For You` / `Loud`** — Diferenciar realmente los modos del feed
 6. **Admin panel + reportes/bloqueos** — Necesario antes del lanzamiento público
-7. **Adjuntos de chat** — Storage privado, mensajes `image` y UI
+7. **Notas de voz y adjuntos de chat** — Storage privado, mensajes multimedia, caché local y políticas por conversación
 
 ---
 

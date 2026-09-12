@@ -35,7 +35,7 @@ const authenticatedResponsiveProjects: Project[] = [
   },
 ].map(project => ({
   ...project,
-  testMatch: /authenticated\.(navigation|visual|a11y|interactions)\.spec\.ts/,
+  testMatch: /authenticated\.(navigation|visual|a11y|interactions|voice)\.spec\.ts/,
   dependencies: ['auth-setup'],
   metadata: { authRole: 'demo' },
   use: {

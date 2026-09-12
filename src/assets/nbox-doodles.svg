@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 220" fill="none">
+  <g stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- chat bubble -->
+    <path d="M18 21h48v31H43L31 62l2-10H18z"/>
+    <path d="M29 36h1m11 0h1m11 0h1" stroke-width="4"/>
+
+    <!-- envelope -->
+    <path d="M126 17h47v34h-47z"/>
+    <path d="m128 20 21.5 17L171 20M128 48l14-14m29 14-14-14"/>
+
+    <!-- lightning drop -->
+    <path d="m230 12-13 24h12l-5 19 21-28h-13l7-15z"/>
+
+    <!-- hash -->
+    <path d="m79 88-5 38m22-38-5 38m-22-26h36m-38 15h36"/>
+
+    <!-- wonky star -->
+    <path d="m188 88 6 14 16 1-12 10 4 16-14-8-14 8 4-16-12-10 16-1z"/>
+
+    <!-- smile sticker -->
+    <path d="M20 151c3-15 16-24 31-20 15 3 23 17 19 32-3 14-17 22-31 19-15-4-23-17-19-31z"/>
+    <path d="M34 149h1m20 0h1" stroke-width="4"/>
+    <path d="M34 163c7 6 15 6 22 0"/>
+
+    <!-- paper plane -->
+    <path d="m116 164 54-23-17 51-13-18-24-10z"/>
+    <path d="m140 174 30-33-41 27m11 6-2 17 10-10"/>
+
+    <!-- voice wave -->
+    <path d="M211 164v13m9-23v33m9-43v52m9-34v16m9-27v38m9-24v10"/>
+
+    <!-- loose notebook marks -->
+    <path d="m111 72 4-5m5 10 6-3m-17-13-2-6M251 91l7 7m0-7-7 7M112 205l5-5m5 5-5-5"/>
+  </g>
+</svg>

@@ -55,7 +55,7 @@ export default function MessageNotifier() {
 
       if (isNewMessage && conv.last_message_sender_id !== user.id) {
         toast(`New message from ${conv.other.display_name}`, 4000)
-        if (window.innerWidth > 760) {
+        if (window.innerWidth > 820) {
           const alreadyOpen = chats.some(c => c.conversationId === conv.id)
           if (!alreadyOpen) {
             openChat({

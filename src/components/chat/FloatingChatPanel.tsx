@@ -1,13 +1,16 @@
 import { createPortal } from 'react-dom'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Minus, X, Send, Phone, Video, Paperclip } from 'lucide-react'
+import { AudioLines, Minus, X, Phone, Video } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
-import { useMessages, useSendMessage } from '../../features/chat/useMessages'
+import { useMessages } from '../../features/chat/useMessages'
 import { usePresence } from '../../features/presence/usePresence'
 import { useFloatingChat, type FloatingChatEntry } from '../../features/chat/FloatingChatContext'
 import Avatar from '../ui/Avatar'
 import { useToast } from '../ui/Toast'
+import ChatComposer from './ChatComposer'
+import ChatMessageBubble from './ChatMessageBubble'
+import VoiceNoteConversationSettings from './VoiceNoteConversationSettings'
 
 function timeMsg(iso: string) {
   const d = new Date(iso)
@@ -18,28 +21,17 @@ function FloatingWindow({ entry, index }: { entry: FloatingChatEntry; index: num
   const { user } = useAuth()
   const { closeChat, toggleMinimize } = useFloatingChat()
   const { data: messages = [] } = useMessages(entry.conversationId, user?.id)
-  const sendMsg = useSendMessage(entry.conversationId, user?.id ?? '')
   const presence = usePresence(entry.otherId)
   const toast = useToast()
-  const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const voiceSettingsButtonRef = useRef<HTMLButtonElement>(null)
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
 
   const right = Math.min(18 + index * 356, Math.max(10, window.innerWidth - 360))
 
   useEffect(() => {
     if (!entry.minimized) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, entry.minimized])
-
-  async function handleSend() {
-    const body = draft.trim()
-    if (!body) return
-    setDraft('')
-    await sendMsg.mutateAsync(body)
-  }
-
-  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') handleSend()
-  }
 
   if (entry.minimized) {
     return (
@@ -105,6 +97,18 @@ function FloatingWindow({ entry, index }: { entry: FloatingChatEntry; index: num
             {presence.label || (presence.status === 'offline' ? 'OFFLINE' : 'ACTIVE')}
           </div>
         </Link>
+        <button
+          ref={voiceSettingsButtonRef}
+          className="fc-icon"
+          type="button"
+          title="Voice note settings"
+          aria-label="Voice note settings"
+          aria-haspopup="dialog"
+          aria-expanded={voiceSettingsOpen}
+          onClick={() => setVoiceSettingsOpen(true)}
+        >
+          <AudioLines size={13} strokeWidth={2.7} aria-hidden="true" />
+        </button>
         <button className="fc-icon fc-call" type="button" title="Call" onClick={() => toast('Calls coming soon')}>
           <Phone size={13} strokeWidth={2.5} />
         </button>
@@ -128,36 +132,34 @@ function FloatingWindow({ entry, index }: { entry: FloatingChatEntry; index: num
         {messages.map(m => {
           const isMe = m.sender_id === user?.id
           return (
-            <div key={m.id} className={`msg-bubble ${isMe ? 'me' : 'them'}`} style={{ fontSize: 13 }}>
-              {m.body}
-              <div className="msg-time">{timeMsg(m.created_at)}{isMe && ' sent'}</div>
-            </div>
+            <ChatMessageBubble
+              key={m.id}
+              message={m}
+              isMine={isMe}
+              time={timeMsg(m.created_at)}
+              sentLabel=" sent"
+              compact
+            />
           )
         })}
         <div ref={bottomRef} />
       </div>
 
-      <div className="fc-input">
-        <button className="fc-icon" type="button" title="Attach" onClick={() => toast('Attachments coming soon')}>
-          <Paperclip size={13} strokeWidth={2.5} />
-        </button>
-        <input
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Message…"
-          aria-label="Message"
+      <ChatComposer
+        conversationId={entry.conversationId}
+        userId={user?.id ?? ''}
+        compact
+        onAttach={() => toast('Attachments coming soon')}
+      />
+      {voiceSettingsOpen && user?.id && (
+        <VoiceNoteConversationSettings
+          conversationId={entry.conversationId}
+          userId={user.id}
+          otherName={entry.otherName}
+          onClose={() => setVoiceSettingsOpen(false)}
+          anchorRef={voiceSettingsButtonRef}
         />
-        <button
-          className="fc-icon"
-          type="button"
-          style={{ background: 'var(--bg-panel)', color: 'var(--ink)', opacity: draft.trim() ? 1 : .4 }}
-          onClick={handleSend}
-          disabled={!draft.trim()}
-        >
-          <Send size={13} strokeWidth={2.5} />
-        </button>
-      </div>
+      )}
     </div>
   )
 }
