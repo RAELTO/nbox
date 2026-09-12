@@ -114,7 +114,8 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [ ] Sección "About" con links y fecha de unión
 
 ### Inbox
-- [ ] Adjuntos, emojis, llamadas — stubs "coming soon"
+- [x] Selector de emojis nativos con licencia MIT, inserción en el cursor y carga diferida
+- [ ] Adjuntos y llamadas — stubs "coming soon"
 
 ### Notas de voz en chat — fase directa completada
 - [x] Definir arquitectura: audio en Storage privado, metadatos en Postgres y borrador local

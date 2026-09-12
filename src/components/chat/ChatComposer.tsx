@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Mic, MicOff, Paperclip, Send, Smile, Square, Trash2, X } from 'lucide-react'
 import { useSendMessage } from '../../features/chat/useMessages'
 import { useSendVoiceMessage } from '../../features/chat/useSendVoiceMessage'
 import { useVoiceRecorder } from '../../features/chat/useVoiceRecorder'
 import { formatVoiceDuration } from '../../features/chat/voiceFormats'
 import VoiceAudioControl from './VoiceAudioControl'
+import EmojiPickerPopover from './EmojiPickerPopover'
 import {
   isVoiceNotesBlockedError,
   useVoiceNoteCapability,
@@ -16,7 +17,6 @@ interface ChatComposerProps {
   userId: string
   compact?: boolean
   onAttach?: () => void
-  onEmoji?: () => void
 }
 
 export default function ChatComposer({
@@ -24,12 +24,14 @@ export default function ChatComposer({
   userId,
   compact = false,
   onAttach,
-  onEmoji,
 }: ChatComposerProps) {
   const [text, setText] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
   const [isPreparingVoice, setIsPreparingVoice] = useState(false)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const stopButtonRef = useRef<HTMLButtonElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const voiceStartPendingRef = useRef(false)
   const voiceStartAttemptRef = useRef(0)
   const sendText = useSendMessage(conversationId, userId)
@@ -45,6 +47,27 @@ export default function ChatComposer({
     voiceStartAttemptRef.current += 1
     voiceStartPendingRef.current = false
   }, [])
+
+  const closeEmojiPicker = useCallback((restoreFocus: boolean) => {
+    setEmojiPickerOpen(false)
+    if (restoreFocus) requestAnimationFrame(() => emojiButtonRef.current?.focus({ preventScroll: true }))
+  }, [])
+
+  function handleEmojiSelect(emoji: string) {
+    const input = inputRef.current
+    const selectionStart = input?.selectionStart ?? text.length
+    const selectionEnd = input?.selectionEnd ?? selectionStart
+    const nextText = `${text.slice(0, selectionStart)}${emoji}${text.slice(selectionEnd)}`
+    const nextCaret = selectionStart + emoji.length
+
+    setText(nextText)
+    setSendError(null)
+    setEmojiPickerOpen(false)
+    requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true })
+      inputRef.current?.setSelectionRange(nextCaret, nextCaret)
+    })
+  }
 
   async function handleTextSend() {
     const body = text.trim()
@@ -168,17 +191,27 @@ export default function ChatComposer({
         <Paperclip size={compact ? 13 : 15} strokeWidth={2.5} aria-hidden="true" />
       </button>
       <input
+        ref={inputRef}
         value={text}
         onChange={event => { setText(event.target.value); setSendError(null) }}
         onKeyDown={handleKeyDown}
         placeholder="Message…"
         aria-label="Message"
       />
-      {!compact && (
-        <button type="button" className="chat-composer-icon" onClick={onEmoji} aria-label="Choose emoji">
-          <Smile size={15} strokeWidth={2.5} aria-hidden="true" />
-        </button>
-      )}
+      <button
+        ref={emojiButtonRef}
+        type="button"
+        className="chat-composer-icon chat-composer-emoji"
+        onClick={() => {
+          inputRef.current?.blur()
+          setEmojiPickerOpen(open => !open)
+        }}
+        aria-label="Choose emoji"
+        aria-haspopup="dialog"
+        aria-expanded={emojiPickerOpen}
+      >
+        <Smile size={compact ? 14 : 15} strokeWidth={2.5} aria-hidden="true" />
+      </button>
       {text.trim() ? (
         <button
           type="button"
@@ -223,6 +256,13 @@ export default function ChatComposer({
           <span>{voice.error ?? sendError}</span>
           {voice.error && <button type="button" onClick={voice.clearError}>Dismiss</button>}
         </div>
+      )}
+      {emojiPickerOpen && (
+        <EmojiPickerPopover
+          anchorRef={emojiButtonRef}
+          onSelect={handleEmojiSelect}
+          onClose={closeEmojiPicker}
+        />
       )}
     </div>
   )
