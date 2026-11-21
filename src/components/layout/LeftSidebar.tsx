@@ -168,14 +168,16 @@ export default function LeftSidebar() {
                   }} />
                 )}
               </Link>
+              <span className="tablet-contact-name" aria-hidden="true">
+                {c.other.display_name}
+              </span>
               <button
                 type="button"
                 className="tablet-contact-chat"
                 title={`Chat with ${c.other.display_name}`}
+                aria-label={`Chat with ${c.other.display_name}`}
                 onClick={() => handleContactChat(c.other.id, c.other.display_name, c.other.username, c.other.avatar_url)}
-              >
-                {c.other.display_name}
-              </button>
+              />
             </div>
           ))}
         </div>

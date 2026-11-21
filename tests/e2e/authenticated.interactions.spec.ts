@@ -135,7 +135,15 @@ test('@smoke desktop floating chat keeps the clean red input focus', async ({ pa
     body: '[]',
   }))
 
-  await openContact.click()
+  const contactRow = page.locator('.sidebar-contact-row').first()
+  const rowBounds = await contactRow.boundingBox()
+  expect(rowBounds).not.toBeNull()
+  await contactRow.click({
+    position: {
+      x: Math.max(1, (rowBounds?.width ?? 1) - 8),
+      y: Math.max(1, (rowBounds?.height ?? 1) / 2),
+    },
+  })
   const composer = page.locator('.float-chat .chat-composer.compact')
   const input = composer.getByRole('textbox', { name: 'Message' })
   await expect(composer).toBeVisible()

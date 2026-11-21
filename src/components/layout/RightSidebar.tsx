@@ -187,12 +187,7 @@ export default function RightSidebar() {
                     }} />
                   )}
                 </Link>
-                <button
-                  type="button"
-                  className="sidebar-contact-open"
-                  onClick={() => handleOpenChat(c.other.id, c.other.display_name, c.other.username, c.other.avatar_url)}
-                  aria-label={`Open chat with ${c.other.display_name}`}
-                >
+                <div className="sidebar-contact-copy" aria-hidden="true">
                   <span className="sidebar-contact-name">
                     {c.other.display_name}
                   </span>
@@ -201,7 +196,14 @@ export default function RightSidebar() {
                       {presenceMap[c.other.id].label}
                     </span>
                   )}
-                </button>
+                </div>
+                <button
+                  type="button"
+                  className="sidebar-contact-open"
+                  onClick={() => handleOpenChat(c.other.id, c.other.display_name, c.other.username, c.other.avatar_url)}
+                  aria-label={`Open chat with ${c.other.display_name}`}
+                  title={`Open chat with ${c.other.display_name}`}
+                />
               </div>
             ))}
           </div>

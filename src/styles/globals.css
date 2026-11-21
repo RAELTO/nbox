@@ -2761,16 +2761,28 @@ button.box-action { background: none; border: none; font: inherit; }
 }
 .float-chat-min-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-contact-row {
+  position: relative;
   padding: 4px 6px; transition: background .1s, transform .1s, box-shadow .1s;
+  cursor: pointer;
 }
 .sidebar-contact-row:focus-within,
 .sidebar-contact-row:hover {
   background: var(--accent-2); transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink);
 }
 .sidebar-contact-open {
+  position: absolute; inset: 0; z-index: 0;
+  padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer;
+}
+.sidebar-contact-open:focus-visible {
+  outline: 3px solid var(--ink); outline-offset: 2px;
+}
+.sidebar-contact-row > a,
+.sidebar-contact-copy {
+  position: relative; z-index: 1;
+}
+.sidebar-contact-copy {
   display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: flex-start;
-  padding: 0; border: 0; background: transparent; color: inherit;
-  cursor: pointer; font: inherit; text-align: left;
+  pointer-events: none;
 }
 .sidebar-contact-name {
   width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -5508,9 +5520,11 @@ p { text-wrap: pretty; }
 }
 
 .tablet-contact-row {
+  position: relative;
   padding: 3px 4px;
   border: 2px solid transparent;
   transition: background .1s, transform .1s, box-shadow .1s;
+  cursor: pointer;
 }
 
 .tablet-contact-row:focus-within,
@@ -5522,16 +5536,37 @@ p { text-wrap: pretty; }
 }
 
 .tablet-contact-chat {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tablet-contact-chat:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tablet-contact-row > a,
+.tablet-contact-name {
+  position: relative;
+  z-index: 1;
+}
+
+.tablet-contact-name {
   flex: 1;
   min-width: 0;
   padding: 5px 3px;
   overflow: hidden;
-  color: var(--ink);
   font-size: 13px;
   font-weight: 700;
-  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 .confirm-overlay,
