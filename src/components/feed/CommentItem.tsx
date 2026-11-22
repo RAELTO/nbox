@@ -136,10 +136,13 @@ export default function CommentItem({ comment, onDelete, onOpenActivity }: Props
             <button type="button"
               onClick={() => handleVote('like')}
               className="comment-vote-btn"
-              style={{ background: myVote === 'like' ? 'var(--accent-4)' : 'none' }}
+              style={{
+                background: myVote === 'like' ? 'var(--accent-4)' : 'none',
+                color: myVote === 'like' ? 'var(--on-accent-4)' : 'var(--ink)',
+              }}
               title="Like"
             >
-              <ThumbsUp size={11} strokeWidth={2.5} style={{ color: myVote === 'like' ? 'var(--ink)' : 'var(--accent-4)' }} />
+              <ThumbsUp size={11} strokeWidth={2.5} style={{ color: myVote === 'like' ? 'var(--on-accent-4)' : 'var(--accent-4)' }} />
               {likeCount > 0 && likeCount}
             </button>
 
@@ -148,11 +151,11 @@ export default function CommentItem({ comment, onDelete, onOpenActivity }: Props
               className="comment-vote-btn"
               style={{
                 background: myVote === 'dislike' ? 'var(--accent-1)' : 'none',
-                color: myVote === 'dislike' ? 'var(--bg-panel)' : 'var(--ink)',
+                color: myVote === 'dislike' ? 'var(--on-accent-1)' : 'var(--ink)',
               }}
               title="Dislike"
             >
-              <ThumbsDown size={11} strokeWidth={2.5} style={{ color: myVote === 'dislike' ? 'var(--bg-panel)' : 'var(--accent-1)' }} />
+              <ThumbsDown size={11} strokeWidth={2.5} style={{ color: myVote === 'dislike' ? 'var(--on-accent-1)' : 'var(--accent-1)' }} />
               {dislikeCount > 0 && dislikeCount}
             </button>
 

@@ -12,6 +12,7 @@ import {
   profileLinkSchema,
   profileUpdateSchema,
   safeHttpUrlSchema,
+  userThemeConfigSchema,
 } from '../../src/lib/validation'
 
 test('Vercel applies security headers to every route', async () => {
@@ -67,6 +68,47 @@ test('URL and input schemas reject malformed or unsafe input', () => {
   expect(createGroupSchema.safeParse({ name: 'Group', memberIds: ['invalid'], clientRequestId: 'invalid' }).success).toBe(false)
   expect(sanitizeText(' <b>hello</b>\u0000 ')).toBe('hello')
   expect(sanitizeHtml('<img src=x>')).toBe('&lt;img src=x&gt;')
+})
+
+test('theme config accepts canonical colors and rejects unsafe or unsupported values', () => {
+  const valid = {
+    version: 1,
+    palette: 'custom',
+    mode: 'dark',
+    shadow: 'high',
+    overrides: { custom: { bg_panel: '#1d2026', accent_1: '#56c4e8' }, coral: { ink: '#878787' } },
+  }
+  expect(userThemeConfigSchema.parse(valid)).toEqual(valid)
+  expect(profileUpdateSchema.safeParse({ theme_config: valid }).success).toBe(true)
+  expect(profileUpdateSchema.safeParse({ theme_config: null }).success).toBe(true)
+
+  for (const value of [
+    '#111111; background: url(https://evil.test)',
+    'url(javascript:alert(1))',
+    '<style>body{display:none}</style>',
+    '#fff',
+    '#FFF',
+    '#ABCDEF',
+    '#11223344',
+    '#111111\n',
+    'rgb(1,2,3)',
+  ]) {
+    const config = { ...valid, overrides: { custom: { accent_1: value } } }
+    expect(userThemeConfigSchema.safeParse(config).success, JSON.stringify(value)).toBe(false)
+  }
+
+  for (const config of [
+    { ...valid, role: 'admin' },
+    { ...valid, overrides: { neon: { bg: '#111111' } } },
+    { ...valid, overrides: { custom: { unknown_slot: '#111111' } } },
+    { ...valid, overrides: { custom: JSON.parse('{"__proto__":{"bg":"#111111"}}') } },
+  ]) {
+    expect(userThemeConfigSchema.safeParse(config).success).toBe(false)
+  }
+
+  const oversized = { ...valid, overrides: { custom: { accent_1: 'é'.repeat(2100) } } }
+  expect(new TextEncoder().encode(JSON.stringify(oversized)).length).toBeGreaterThan(4096)
+  expect(userThemeConfigSchema.safeParse(oversized).success).toBe(false)
 })
 
 test('browser sanitization strips markup and permits only basic formatting', async ({ page, baseURL }) => {

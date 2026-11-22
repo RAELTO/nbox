@@ -4,18 +4,18 @@ import { formatSystemEvent, type ConversationSummary } from '../../features/chat
 import type { PresenceInfo } from '../../features/presence/usePresence'
 import GroupAvatar from './group/GroupAvatar'
 
-const AVATAR_COLORS = [
-  'var(--accent-1)',
-  'var(--accent-3)',
-  'var(--accent-4)',
-  'var(--accent-5)',
-  'var(--accent-2)',
+const AVATAR_PAIRS = [
+  { background: 'var(--accent-1)', color: 'var(--on-accent-1)' },
+  { background: 'var(--accent-3)', color: 'var(--on-accent-3)' },
+  { background: 'var(--accent-4)', color: 'var(--on-accent-4)' },
+  { background: 'var(--accent-5)', color: 'var(--on-accent-5)' },
+  { background: 'var(--accent-2)', color: 'var(--on-accent-2)' },
 ]
 
-function strColor(str: string) {
+function strPair(str: string) {
   let h = 0
   for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
+  return AVATAR_PAIRS[Math.abs(h) % AVATAR_PAIRS.length]
 }
 
 function timeAgo(iso: string) {
@@ -34,7 +34,7 @@ function SqAvatar({ name, size = 52 }: { name: string; size?: number }) {
   return (
     <div
       className="sq-avatar"
-      style={{ width: size, height: size, background: strColor(name), fontSize: size * 0.38 }}
+      style={{ width: size, height: size, ...strPair(name), fontSize: size * 0.38 }}
     >
       {name.charAt(0).toUpperCase()}
     </div>

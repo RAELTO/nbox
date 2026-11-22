@@ -84,3 +84,12 @@ Applied `20260913120000_stories_social_groups_and_admin_close.sql` through Supab
 Compared findings by lint name and detail. The existing security warning is for the project's Auth configuration. [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
 
 The final performance snapshot includes six new unused-index notices. The migration adds full indexes on `group_members.user_id` and `boxes.group_id` to cover foreign-key operations across all membership and publication states. [Supabase database linter](https://supabase.com/docs/guides/database/database-linter)
+
+## Live verification for profile theme configuration
+
+Supabase MCP applied `20260914120000_profile_theme_config.sql` to project `korxgckhjvsrknunqiif` on 2026-11-22 UTC. Live migration history records version `20261122025923` under `profile_theme_config`. PostgREST accepted the schema reload notification.
+
+- `supabase/tests/profile_theme_config.sql` passed 63 assertions through `execute_sql` and reached its rollback. Checks covered save and reset, invalid values through the RPC and table constraint, role grants, banned users, and cross-user writes through both ordinary and administrator accounts.
+- A separate query after rollback found zero auth users matching `%@example.invalid`.
+- Security advisors reported one existing warning for disabled leaked password protection and zero new findings. [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+- Performance advisors reported the same 71 findings before and after the migration, with zero new findings. The report contains 9 unindexed foreign keys, 27 RLS initplan warnings, 26 unused indexes, and 9 multiple permissive policy warnings. [Supabase database linter](https://supabase.com/docs/guides/database/database-linter)

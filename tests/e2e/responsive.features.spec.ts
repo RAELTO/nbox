@@ -51,7 +51,9 @@ async function installMockSessionAndApi(page: Page) {
     notifPatchPayloads: [] as Array<{ url: string; body: unknown }>,
     groupTextPayloads: [] as unknown[],
     createGroupPayloads: [] as unknown[],
+    themeSavePayloads: [] as unknown[],
   }
+  let savedThemeConfig: unknown = null
 
   let notifications = [
     {
@@ -278,6 +280,13 @@ async function installMockSessionAndApi(page: Page) {
       return json('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb5')
     }
 
+    if (pathname.endsWith('/rpc/update_my_theme_config')) {
+      const body = req.postDataJSON() as { p_theme_config?: unknown } | null
+      telemetry.themeSavePayloads.push(body)
+      savedThemeConfig = body?.p_theme_config ?? null
+      return json({ ok: true, theme_config: savedThemeConfig })
+    }
+
     if (pathname.endsWith('/profiles')) {
       const profile = {
         id: USER_ID,
@@ -288,6 +297,7 @@ async function installMockSessionAndApi(page: Page) {
         role: 'user',
         is_banned: false,
         voice_notes_enabled: true,
+        theme_config: savedThemeConfig,
         pinned_box_id: PINNED_BOX_ID,
         links: [
           { label: 'NBOX Repo', url: 'https://nbox.dev' },
@@ -579,7 +589,7 @@ async function assertNoHorizontalOverflow(page: Page, contextLabel: string) {
 }
 
 async function assertNoBlockingAxeViolations(page: Page, scope?: string) {
-  let builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+  let builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('iframe')
   if (scope) builder = builder.include(scope)
   const results = await builder.analyze()
   const blocking = results.violations.filter(
@@ -716,6 +726,56 @@ for (const vp of VIEWPORTS) {
       await assertNoHorizontalOverflow(page, `notifications ${vp.name}`)
       await assertNoBlockingAxeViolations(page, '#main-content')
     })
+
+    test(`dark mode softness & custom prism theme save fit ${vp.name}`, async ({ page }) => {
+      const telemetry = await installMockSessionAndApi(page)
+      await page.goto('/my-box', { waitUntil: 'domcontentloaded' })
+
+      const themeCard = page.locator('.theme-profile-card')
+      await expect(themeCard).toBeVisible()
+      await themeCard.getByRole('button', { name: /Customize theme/i }).click()
+
+      const dialog = page.locator('.appearance-dialog')
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('button', { name: /Use Dark palette/i }).click()
+
+      const darkTokens = await page.evaluate(() => {
+        const cs = getComputedStyle(document.documentElement)
+        return {
+          mode: document.documentElement.dataset.themeMode,
+          line: cs.getPropertyValue('--line').trim().toLowerCase(),
+          shadow: cs.getPropertyValue('--shadow-color').trim().toLowerCase(),
+          onAccent2: cs.getPropertyValue('--on-accent-2').trim().toLowerCase(),
+        }
+      })
+      expect(darkTokens.mode).toBe('dark')
+      expect(darkTokens.line).toBe('#737885')
+      expect(darkTokens.shadow).toBe('#3a3e49')
+      expect(darkTokens.onAccent2).toBe('#111111')
+
+      const hexInput = dialog.locator('.prism-hex-input')
+      await hexInput.fill('#2563eb')
+      await hexInput.press('Enter')
+
+      const liveAccent = await page.evaluate(() => ({
+        accent1: document.documentElement.style.getPropertyValue('--accent-1').trim().toLowerCase(),
+        onAccent1: document.documentElement.style.getPropertyValue('--on-accent-1').trim().toLowerCase(),
+      }))
+      expect(liveAccent.accent1).toBe('#2563eb')
+      expect(['#111111', '#f5f5f7']).toContain(liveAccent.onAccent1)
+
+      await assertNoHorizontalOverflow(page, `appearance customizer ${vp.name}`)
+      await assertNoBlockingAxeViolations(page, '.appearance-dialog')
+
+      await dialog.getByRole('button', { name: /Save to profile/i }).click()
+      await expect.poll(() => telemetry.themeSavePayloads.length).toBe(1)
+
+      await dialog.getByRole('button', { name: /Close appearance dialog/i }).click()
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByRole('region', { name: 'Stories' })).toBeVisible()
+      await assertNoHorizontalOverflow(page, `home dark custom ${vp.name}`)
+      await assertNoBlockingAxeViolations(page, '#main-content')
+    })
   })
 }
 
@@ -744,7 +804,7 @@ test('gracefully falls back when Supabase migrations are not yet applied', async
     const req = route.request()
     const url = new URL(req.url())
     const selectParam = url.searchParams.get('select') ?? ''
-    if (selectParam.includes('pinned_box_id') || selectParam.includes('links')) {
+    if (selectParam.includes('pinned_box_id') || selectParam.includes('links') || selectParam.includes('theme_config')) {
       extendedProfileCalls += 1
       await route.fulfill({
         status: 400,

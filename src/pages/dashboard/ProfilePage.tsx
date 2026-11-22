@@ -16,6 +16,7 @@ import ImageUpload from '../../components/ui/ImageUpload'
 import Avatar from '../../components/ui/Avatar'
 import { useToast } from '../../components/ui/Toast'
 import VoiceNoteGlobalSetting from '../../components/chat/VoiceNoteGlobalSetting'
+import ThemeProfileCard from '../../components/ui/ThemeProfileCard'
 
 const schema = z.object({
   display_name: z.string().min(2, 'Minimum 2 characters').max(100, 'Maximum 100 characters'),
@@ -231,7 +232,10 @@ export default function ProfilePage() {
             </form>
           </div>
           {user?.id && profile && (
-            <VoiceNoteGlobalSetting userId={user.id} enabled={profile.voice_notes_enabled !== false} />
+            <>
+              <VoiceNoteGlobalSetting userId={user.id} enabled={profile.voice_notes_enabled !== false} />
+              <ThemeProfileCard userId={user.id} themeConfig={profile.theme_config} />
+            </>
           )}
         </>
       )}

@@ -9,7 +9,7 @@ function SqAvatar({ name, size = 40 }: { name: string; size?: number }) {
   return (
     <div
       className="sq-avatar"
-      style={{ width: size, height: size, background: 'var(--accent-3)', fontSize: size * 0.38 }}
+      style={{ width: size, height: size, background: 'var(--accent-3)', color: 'var(--on-accent-3)', fontSize: size * 0.38 }}
     >
       {name.charAt(0).toUpperCase()}
     </div>

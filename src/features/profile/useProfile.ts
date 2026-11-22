@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { sanitizeText, sanitizeUrl } from '../../lib/sanitize'
+import type { UserThemeConfig } from '../../lib/theme'
+import { userThemeConfigSchema } from '../../lib/validation'
 import type { Json } from '../../types/database'
 
 export interface ProfileLink {
@@ -19,6 +21,7 @@ export interface Profile {
   voice_notes_enabled?: boolean
   pinned_box_id: string | null
   links: ProfileLink[]
+  theme_config: UserThemeConfig | null
   created_at: string
 }
 
@@ -30,18 +33,51 @@ interface ProfileFormData {
   links?: ProfileLink[]
 }
 
-const PROFILE_EXTENDED_SELECT = 'id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled, pinned_box_id, links, created_at'
+const PROFILE_EXTENDED_SELECT = 'id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled, pinned_box_id, links, theme_config, created_at'
+const PROFILE_PRE_THEME_SELECT = 'id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled, pinned_box_id, links, created_at'
 const PROFILE_LEGACY_SELECT = 'id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled, created_at'
 
 let profileExtendedColumnsSupported = true
+let profileThemeColumnSupported = true
 
-function isMissingProfileColumnError(error: { code?: string; message?: string } | null | undefined) {
+type ProfileColumnError = { code?: string; message?: string }
+
+function isMissingProfileColumnError(error: ProfileColumnError | null | undefined) {
   if (!error) return false
   const msg = error.message ?? ''
   return error.code === '42703'
     || error.code === 'PGRST204'
     || msg.includes('pinned_box_id')
     || msg.includes('links')
+    || msg.includes('theme_config')
+}
+
+function isMissingProfileEnhancement(error: ProfileColumnError | null) {
+  return error?.message?.includes('pinned_box_id') || error?.message?.includes('links')
+}
+
+type ProfileSelection = typeof PROFILE_EXTENDED_SELECT | typeof PROFILE_PRE_THEME_SELECT | typeof PROFILE_LEGACY_SELECT
+
+async function fetchProfileRow(read: (columns: ProfileSelection) => PromiseLike<{
+  data: unknown
+  error: ProfileColumnError | null
+}>) {
+  let columns: ProfileSelection = profileExtendedColumnsSupported
+    ? (profileThemeColumnSupported ? PROFILE_EXTENDED_SELECT : PROFILE_PRE_THEME_SELECT)
+    : PROFILE_LEGACY_SELECT
+  let result = await read(columns)
+  if (columns === PROFILE_EXTENDED_SELECT && isMissingProfileColumnError(result.error)
+    && !isMissingProfileEnhancement(result.error)) {
+    columns = PROFILE_PRE_THEME_SELECT
+    result = await read(columns)
+    if (!result.error) profileThemeColumnSupported = false
+  }
+  if (columns !== PROFILE_LEGACY_SELECT && isMissingProfileColumnError(result.error)) {
+    profileExtendedColumnsSupported = false
+    result = await read(PROFILE_LEGACY_SELECT)
+  }
+  if (result.error) throw result.error
+  return result.data as Record<string, unknown> | null
 }
 
 function parseProfileLinks(raw: unknown): ProfileLink[] {
@@ -60,6 +96,7 @@ function parseProfileLinks(raw: unknown): ProfileLink[] {
 }
 
 function normalizeProfile(row: Record<string, unknown>): Profile {
+  const theme = row.theme_config == null ? null : userThemeConfigSchema.safeParse(row.theme_config)
   return {
     id: String(row.id),
     display_name: String(row.display_name ?? ''),
@@ -71,6 +108,7 @@ function normalizeProfile(row: Record<string, unknown>): Profile {
     voice_notes_enabled: typeof row.voice_notes_enabled === 'boolean' ? row.voice_notes_enabled : undefined,
     pinned_box_id: typeof row.pinned_box_id === 'string' ? row.pinned_box_id : null,
     links: parseProfileLinks(row.links),
+    theme_config: theme?.success ? theme.data : null,
     created_at: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
   }
 }
@@ -79,26 +117,12 @@ export function useProfile(userId?: string) {
   return useQuery({
     queryKey: ['profile', userId],
     queryFn: async () => {
-      const selectCols = profileExtendedColumnsSupported ? PROFILE_EXTENDED_SELECT : PROFILE_LEGACY_SELECT
-      const { data, error } = await supabase
+      const row = await fetchProfileRow(columns => supabase
         .from('profiles')
-        .select(selectCols)
+        .select(columns)
         .eq('id', userId!)
-        .single()
-      if (error) {
-        if (profileExtendedColumnsSupported && isMissingProfileColumnError(error)) {
-          profileExtendedColumnsSupported = false
-          const fallback = await supabase
-            .from('profiles')
-            .select(PROFILE_LEGACY_SELECT)
-            .eq('id', userId!)
-            .single()
-          if (fallback.error) throw fallback.error
-          return normalizeProfile(fallback.data as unknown as Record<string, unknown>)
-        }
-        throw error
-      }
-      return normalizeProfile(data as unknown as Record<string, unknown>)
+        .single())
+      return normalizeProfile(row!)
     },
     enabled: !!userId,
   })
@@ -108,28 +132,40 @@ export function useProfileByUsername(username?: string) {
   return useQuery({
     queryKey: ['profile', 'by-username', username?.toLowerCase()],
     queryFn: async () => {
-      const selectCols = profileExtendedColumnsSupported ? PROFILE_EXTENDED_SELECT : PROFILE_LEGACY_SELECT
-      const { data, error } = await supabase
+      const row = await fetchProfileRow(columns => supabase
         .from('profiles')
-        .select(selectCols)
+        .select(columns)
         .eq('username', username!.toLowerCase())
-        .maybeSingle()
-      if (error) {
-        if (profileExtendedColumnsSupported && isMissingProfileColumnError(error)) {
-          profileExtendedColumnsSupported = false
-          const fallback = await supabase
-            .from('profiles')
-            .select(PROFILE_LEGACY_SELECT)
-            .eq('username', username!.toLowerCase())
-            .maybeSingle()
-          if (fallback.error) throw fallback.error
-          return fallback.data ? normalizeProfile(fallback.data as unknown as Record<string, unknown>) : null
-        }
-        throw error
-      }
-      return data ? normalizeProfile(data as unknown as Record<string, unknown>) : null
+        .maybeSingle())
+      return row ? normalizeProfile(row) : null
     },
     enabled: !!username && username.length >= 3,
+  })
+}
+
+export function useSaveThemeConfig(userId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationKey: ['profile', 'theme-config', userId],
+    scope: { id: `profile-theme:${userId}` },
+    mutationFn: async (config: UserThemeConfig | null) => {
+      if (!userId) throw new Error('Sign in to save your theme to your profile.')
+      const payload = config === null ? null : userThemeConfigSchema.parse(config)
+      const { error } = await supabase.rpc('update_my_theme_config', { p_theme_config: payload as unknown as Json })
+      if (error?.code === 'PGRST202' || error?.code === '42883') {
+        throw new Error('Profile theme sync requires applying the latest Supabase migration.')
+      }
+      if (error?.message === 'user_banned') throw new Error('Banned accounts cannot save profile themes.')
+      if (error) throw new Error('Could not save your theme. Try again.')
+      return payload
+    },
+    onSuccess: async theme_config => {
+      profileThemeColumnSupported = true
+      const queryKey = ['profile', userId]
+      await qc.cancelQueries({ queryKey, exact: true })
+      qc.setQueryData<Profile>(queryKey, profile => profile && { ...profile, theme_config })
+      await qc.invalidateQueries({ queryKey, exact: true })
+    },
   })
 }
 

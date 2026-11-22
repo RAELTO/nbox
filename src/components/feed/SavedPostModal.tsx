@@ -232,9 +232,12 @@ export default function SavedPostModal({ box, onClose }: Props) {
                     aria-pressed={myVote === 'like'}
                     onClick={() => handleVote('like')}
                     className="saved-vote-btn"
-                    style={{ background: myVote === 'like' ? 'var(--accent-4)' : 'none' }}
+                    style={{
+                      background: myVote === 'like' ? 'var(--accent-4)' : 'none',
+                      color: myVote === 'like' ? 'var(--on-accent-4)' : 'var(--ink)',
+                    }}
                   >
-                    <ThumbsUp size={12} strokeWidth={2.5} style={{ color: myVote === 'like' ? 'var(--ink)' : 'var(--accent-4)' }} />
+                    <ThumbsUp size={12} strokeWidth={2.5} style={{ color: myVote === 'like' ? 'var(--on-accent-4)' : 'var(--accent-4)' }} />
                     {likeCount > 0 && likeCount}
                   </button>
                   <button
@@ -245,10 +248,10 @@ export default function SavedPostModal({ box, onClose }: Props) {
                     className="saved-vote-btn"
                     style={{
                       background: myVote === 'dislike' ? 'var(--accent-1)' : 'none',
-                      color: myVote === 'dislike' ? 'var(--bg-panel)' : 'var(--ink)',
+                      color: myVote === 'dislike' ? 'var(--on-accent-1)' : 'var(--ink)',
                     }}
                   >
-                    <ThumbsDown size={12} strokeWidth={2.5} style={{ color: myVote === 'dislike' ? 'var(--bg-panel)' : 'var(--accent-1)' }} />
+                    <ThumbsDown size={12} strokeWidth={2.5} style={{ color: myVote === 'dislike' ? 'var(--on-accent-1)' : 'var(--accent-1)' }} />
                     {dislikeCount > 0 && dislikeCount}
                   </button>
                   <div style={{ position: 'relative' }}>

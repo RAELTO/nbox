@@ -22,6 +22,56 @@ export const profileLinkSchema = z.strictObject({
 
 export const profileLinksArraySchema = z.array(profileLinkSchema).max(5)
 
+const hexColorPattern = /^#[0-9a-f]{6}$/
+const hexColorMessage = 'Use a 6-digit hex color like #ff5a5f'
+
+export const hexColorSchema = z.string().trim().toLowerCase().regex(hexColorPattern, hexColorMessage)
+export const themePaletteIdSchema = z.enum(['coral', 'electric', 'lime', 'dusk', 'dark', 'custom'])
+export const themeModeSchema = z.enum(['light', 'dark'])
+export const themeShadowSchema = z.enum(['low', 'medium', 'high'])
+
+// Persisted theme colors must already be in the same canonical format as the database.
+const storedHexColor = z.string().regex(hexColorPattern, hexColorMessage)
+
+function themeObject<Shape extends Record<string, z.ZodType>>(shape: Shape) {
+  // Check raw own keys because a parser can discard a JSON "__proto__" key before validation.
+  return z.custom<Record<string, unknown>>(value => {
+    if (typeof value !== 'object' || value === null) return false
+    const prototype = Object.getPrototypeOf(value)
+    return (prototype === Object.prototype || prototype === null)
+      && Reflect.ownKeys(value).every(key => Object.hasOwn(shape, key))
+  }, 'Use only supported theme fields').pipe(z.strictObject(shape))
+}
+
+const themeCustomColorsSchema = themeObject({
+  bg: storedHexColor.optional(),
+  bg_alt: storedHexColor.optional(),
+  bg_panel: storedHexColor.optional(),
+  ink: storedHexColor.optional(),
+  line: storedHexColor.optional(),
+  shadow_color: storedHexColor.optional(),
+  accent_1: storedHexColor.optional(),
+  accent_2: storedHexColor.optional(),
+  accent_3: storedHexColor.optional(),
+  accent_4: storedHexColor.optional(),
+  accent_5: storedHexColor.optional(),
+})
+
+export const userThemeConfigSchema = themeObject({
+  version: z.literal(1),
+  palette: themePaletteIdSchema,
+  mode: themeModeSchema,
+  shadow: themeShadowSchema,
+  overrides: themeObject({
+    coral: themeCustomColorsSchema.optional(),
+    electric: themeCustomColorsSchema.optional(),
+    lime: themeCustomColorsSchema.optional(),
+    dusk: themeCustomColorsSchema.optional(),
+    dark: themeCustomColorsSchema.optional(),
+    custom: themeCustomColorsSchema.optional(),
+  }).optional(),
+}).refine(cfg => new TextEncoder().encode(JSON.stringify(cfg)).length <= 4096, 'Theme config exceeds 4 KB limit')
+
 export const profileUpdateSchema = z.strictObject({
   display_name: plainText(2, 100).optional(),
   username: z.string().trim().min(3).max(30).regex(/^[a-z0-9_]+$/).optional(),
@@ -29,6 +79,7 @@ export const profileUpdateSchema = z.strictObject({
   avatar_url: safeHttpUrlSchema.nullable().optional(),
   pinned_box_id: z.uuid().nullable().optional(),
   links: profileLinksArraySchema.optional(),
+  theme_config: userThemeConfigSchema.nullable().optional(),
   voice_notes_enabled: z.boolean().optional(),
 })
 

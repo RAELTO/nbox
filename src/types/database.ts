@@ -24,6 +24,7 @@ export type Database = {
           voice_notes_enabled: boolean
           pinned_box_id: string | null
           links: Json
+          theme_config: Json | null
           last_seen_at: string | null
           created_at: string
           updated_at: string
@@ -39,6 +40,7 @@ export type Database = {
           voice_notes_enabled?: boolean
           pinned_box_id?: string | null
           links?: Json
+          theme_config?: Json | null
           last_seen_at?: string | null
           created_at?: string
           updated_at?: string
@@ -54,6 +56,7 @@ export type Database = {
           voice_notes_enabled?: boolean
           pinned_box_id?: string | null
           links?: Json
+          theme_config?: Json | null
           last_seen_at?: string | null
           created_at?: string
           updated_at?: string
@@ -740,6 +743,10 @@ export type Database = {
       is_banned: {
         Args: Record<string, never>
         Returns: boolean
+      }
+      update_my_theme_config: {
+        Args: { p_theme_config: Json | null }
+        Returns: Json
       }
       search_boxes: {
         Args: { q: string; lim?: number }

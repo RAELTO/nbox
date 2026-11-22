@@ -15,7 +15,13 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import Avatar from '../ui/Avatar'
 import AdminBadge from '../ui/AdminBadge'
 
-const AVATAR_COLORS = ['var(--accent-1)', 'var(--accent-3)', 'var(--accent-4)', 'var(--accent-5)', 'var(--accent-2)']
+const AVATAR_PAIRS = [
+  { background: 'var(--accent-1)', color: 'var(--on-accent-1)' },
+  { background: 'var(--accent-3)', color: 'var(--on-accent-3)' },
+  { background: 'var(--accent-4)', color: 'var(--on-accent-4)' },
+  { background: 'var(--accent-5)', color: 'var(--on-accent-5)' },
+  { background: 'var(--accent-2)', color: 'var(--on-accent-2)' },
+]
 
 export default function LeftSidebar() {
   const { user, signOut } = useAuth()
@@ -156,7 +162,7 @@ export default function LeftSidebar() {
                 title={`View profile for ${c.other.display_name}`}
                 style={{ position: 'relative', flexShrink: 0, display: 'block', textDecoration: 'none' }}
               >
-                <div className="avatar sm" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
+                <div className="avatar sm" style={AVATAR_PAIRS[i % AVATAR_PAIRS.length]}>
                   {c.other.display_name?.charAt(0).toUpperCase() ?? 'U'}
                 </div>
                 {presenceMap[c.other.id] && (
@@ -164,7 +170,7 @@ export default function LeftSidebar() {
                     position: 'absolute', bottom: -2, right: -2,
                     width: 9, height: 9,
                     background: presenceMap[c.other.id].dotColor,
-                    border: '2px solid #111111',
+                    border: '2px solid var(--line)',
                   }} />
                 )}
               </Link>
