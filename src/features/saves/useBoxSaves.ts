@@ -46,7 +46,7 @@ export function useIsBoxSaved(boxId: string, userId?: string, enabled = true) {
   })
 }
 
-export function useSavedBoxes(userId?: string) {
+export function useSavedBoxes(userId?: string, enabled = true) {
   return useQuery({
     queryKey: ['box-saves', userId],
     queryFn: async () => {
@@ -68,7 +68,7 @@ export function useSavedBoxes(userId?: string) {
           return items
         }, [])
     },
-    enabled: !!userId,
+    enabled: enabled && !!userId,
     staleTime: 30_000,
   })
 }

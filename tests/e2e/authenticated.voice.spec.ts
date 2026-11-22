@@ -271,8 +271,11 @@ test('@voice recipient block prevents microphone access and keeps text available
   capability.allowed = false
 
   const composer = await openFirstConversation(page)
-  await expect(composer.getByText('This person is not accepting voice notes in this chat.')).toBeVisible()
-  await expect(composer.getByRole('button', { name: 'Voice notes are disabled by the recipient' })).toBeDisabled()
+  const blockedMic = composer.getByRole('button', { name: 'Voice notes are disabled by the recipient' })
+  await expect(blockedMic).toBeDisabled()
+  await expect(composer.getByRole('tooltip')).toHaveCount(0)
+  await blockedMic.hover()
+  await expect(composer.getByRole('tooltip')).toContainText('This person is not accepting voice notes in this chat.')
   await expect(composer.getByRole('textbox', { name: 'Message' })).toBeEnabled()
   await expectNoHorizontalOverflow(page)
 
@@ -307,7 +310,9 @@ test('@voice recipient block prevents microphone access and keeps text available
   await composer.getByRole('button', { name: 'Send message' }).click()
   await expect.poll(() => sentText).toMatchObject({ body: 'Text still works' })
 
-  await composer.locator('.voice-compose-notice').screenshot({
+  await blockedMic.hover()
+  await expect(composer.getByRole('tooltip')).toBeVisible()
+  await composer.getByRole('tooltip').screenshot({
     path: testInfo.outputPath('voice-recipient-blocked.png'),
     animations: 'disabled',
     caret: 'hide',

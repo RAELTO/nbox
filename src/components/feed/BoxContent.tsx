@@ -6,6 +6,7 @@ import type {
   PollPayload,
   ThreadPayload,
 } from '../../types/database'
+import { sanitizeUrl } from '../../lib/sanitize'
 import PollBoxContent from './PollBoxContent'
 
 const MOOD_BACKGROUND: Record<MoodPayload['color'], string> = {
@@ -14,15 +15,6 @@ const MOOD_BACKGROUND: Record<MoodPayload['color'], string> = {
   m3: '#c77dff',
   m4: '#6ee7b7',
   m5: '#ffd23f',
-}
-
-function safeHref(url: string): string {
-  try {
-    const parsedUrl = new URL(url)
-    return ['http:', 'https:'].includes(parsedUrl.protocol) ? url : '#'
-  } catch {
-    return '#'
-  }
 }
 
 interface BoxContentProps {
@@ -61,7 +53,7 @@ export default function BoxContent({
 
     return (
       <div className="box-media-wrap">
-        <img src={payload.url} alt={payload.caption ?? ''} className="box-media-img" />
+        <img src={sanitizeUrl(payload.url) || undefined} alt={payload.caption ?? ''} className="box-media-img" />
       </div>
     )
   }
@@ -112,10 +104,10 @@ export default function BoxContent({
 
     return (
       <div className="link-card">
-        {payload.thumbnail && <img src={payload.thumbnail} alt="" className="link-thumb" />}
+        {payload.thumbnail && <img src={sanitizeUrl(payload.thumbnail) || undefined} alt="" className="link-thumb" />}
         <div className="link-info">
           {payload.host && <div className="link-host">{payload.host}</div>}
-          <a href={safeHref(payload.url)} target="_blank" rel="noopener noreferrer" className="link-title">
+          <a href={sanitizeUrl(payload.url) || '#'} target="_blank" rel="noopener noreferrer" className="link-title">
             {payload.title ?? payload.url}
           </a>
           {payload.description && <div className="box-link-desc">{payload.description}</div>}

@@ -54,7 +54,7 @@ export default function TagPage() {
           tag
         </div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>
-          <span style={{ background: 'var(--accent-3)', border: 'var(--border)', padding: '0 12px', boxShadow: 'var(--shadow)', display: 'inline-block' }}>
+          <span style={{ background: 'var(--accent-3)', color: 'var(--on-accent-3)', border: 'var(--border)', padding: '0 12px', boxShadow: 'var(--shadow)', display: 'inline-block' }}>
             #{slug}
           </span>
         </h1>

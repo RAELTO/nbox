@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
-import { UserCheck, UserX } from 'lucide-react'
+import { Bell, Check, CheckCheck, UserCheck, UserX } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
 import {
-  useNotifications, useMarkAllRead, getNotifText,
+  useNotifications, useMarkAllRead, useMarkOneRead, getNotifText,
   type NotificationRow,
 } from '../../features/notifications/useNotifications'
 import { useRespondContactRequest } from '../../features/contacts/useContactMutations'
@@ -26,23 +26,27 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d`
 }
 
-function NotifItem({ n, onAccept, onDecline, onCloseDropdown }: {
+function NotifItem({ n, onAccept, onDecline, onMarkRead, onCloseDropdown }: {
   n: NotificationRow
   onAccept?: (n: NotificationRow) => void
   onDecline?: (n: NotificationRow) => void
+  onMarkRead?: (id: string) => void
   onCloseDropdown: () => void
 }) {
   const isContactReq = n.kind === 'contact_request'
+  const isUnread = !n.read_at
+
   return (
-    <div className={`notif-item${!n.read_at ? ' unread' : ''}`}>
-      {n.actor
-        ? (
-          <Link to={`/profile/${n.actor.username}`} onClick={onCloseDropdown} style={{ display: 'flex', textDecoration: 'none' }}>
-            <Avatar name={n.actor.display_name} src={n.actor.avatar_url} size="sm" />
-          </Link>
-        )
-        : <div className="notif-item-avatar-placeholder">★</div>
-      }
+    <div className={`notif-item${isUnread ? ' unread' : ''}`}>
+      {n.actor ? (
+        <Link to={`/profile/${n.actor.username}`} onClick={onCloseDropdown} style={{ display: 'flex', textDecoration: 'none' }}>
+          <Avatar name={n.actor.display_name} src={n.actor.avatar_url} size="sm" />
+        </Link>
+      ) : (
+        <div className="notif-item-avatar-placeholder" aria-hidden="true">
+          <Bell size={15} strokeWidth={2.5} />
+        </div>
+      )}
       <div className="notif-item-body">
         <div className="notif-item-text">
           {n.actor && (
@@ -51,20 +55,46 @@ function NotifItem({ n, onAccept, onDecline, onCloseDropdown }: {
             </Link>
           )}
           {n.actor && ' '}
-          {getNotifText(n)}
+          {n.box_id ? (
+            <Link
+              to={`/box/${n.box_id}`}
+              className="notif-item-box-link"
+              onClick={() => {
+                if (isUnread && onMarkRead) onMarkRead(n.id)
+                onCloseDropdown()
+              }}
+            >
+              {getNotifText(n)}
+            </Link>
+          ) : (
+            getNotifText(n)
+          )}
         </div>
         <div className="notif-item-time">{timeAgo(n.created_at)}</div>
       </div>
-      {isContactReq && onAccept && onDecline && (
-        <div className="notif-item-actions">
-          <button type="button" className="contact-btn contact-btn-accept" onClick={() => onAccept(n)} title="Accept">
-            <UserCheck size={12} strokeWidth={3} />
+      <div className="notif-item-actions">
+        {isContactReq && onAccept && onDecline && (
+          <>
+            <button type="button" className="contact-btn contact-btn-accept" onClick={() => onAccept(n)} title="Accept" aria-label="Accept contact request">
+              <UserCheck size={12} strokeWidth={3} aria-hidden="true" />
+            </button>
+            <button type="button" className="contact-btn contact-btn-decline" onClick={() => onDecline(n)} title="Decline" aria-label="Decline contact request">
+              <UserX size={12} strokeWidth={3} aria-hidden="true" />
+            </button>
+          </>
+        )}
+        {isUnread && onMarkRead && (
+          <button
+            type="button"
+            className="notif-dropdown-mark-one"
+            onClick={() => onMarkRead(n.id)}
+            title="Mark read"
+            aria-label="Mark notification as read"
+          >
+            <Check size={12} strokeWidth={3} aria-hidden="true" />
           </button>
-          <button type="button" className="contact-btn contact-btn-decline" onClick={() => onDecline(n)} title="Decline">
-            <UserX size={12} strokeWidth={3} />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -75,9 +105,15 @@ export default function NotificationsDropdown({ anchorRef, onClose }: Props) {
   const { user } = useAuth()
   const { data: notifications = [] } = useNotifications(user?.id)
   const markAllRead = useMarkAllRead(user?.id)
+  const markOneRead = useMarkOneRead(user?.id)
   const respond = useRespondContactRequest(user?.id ?? '')
   const modalRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
   const [position, setPosition] = useState({ top: 0, left: 0, width: 360 })
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useLayoutEffect(() => {
     const rect = anchorRef.current?.getBoundingClientRect()
@@ -90,45 +126,65 @@ export default function NotificationsDropdown({ anchorRef, onClose }: Props) {
   }, [anchorRef])
 
   useEffect(() => {
-    markAllRead.mutate()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
     function onDown(e: MouseEvent) {
       if (
         modalRef.current && !modalRef.current.contains(e.target as Node) &&
         !anchorRef.current?.contains(e.target as Node)
-      ) onClose()
+      ) onCloseRef.current()
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [onClose, anchorRef])
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [anchorRef])
 
   async function handleAccept(n: NotificationRow) {
     if (!n.contact_request_id || !n.actor_id) return
     await respond.mutateAsync({ requestId: n.contact_request_id, requesterId: n.actor_id, accept: true })
-    toast(`✓ ${n.actor?.display_name} es now tu contacto`)
+    if (!n.read_at) await markOneRead.mutateAsync(n.id).catch(() => {})
+    toast(`${n.actor?.display_name ?? 'User'} is now your contact`)
   }
   async function handleDecline(n: NotificationRow) {
     if (!n.contact_request_id || !n.actor_id) return
     await respond.mutateAsync({ requestId: n.contact_request_id, requesterId: n.actor_id, accept: false })
-    toast(`Request from ${n.actor?.display_name} declined`)
+    if (!n.read_at) await markOneRead.mutateAsync(n.id).catch(() => {})
+    toast(`Request from ${n.actor?.display_name ?? 'user'} declined`)
   }
 
   const preview = notifications.slice(0, 8)
+  const hasUnread = notifications.some(n => !n.read_at)
 
   return createPortal(
     <div
       ref={modalRef}
       className="notif-dropdown"
+      role="dialog"
+      aria-label="Notifications"
       style={{ top: position.top, left: position.left, width: position.width }}
     >
       <div className="notif-dropdown-header">
         <span className="notif-dropdown-title">Notifications</span>
-        <button type="button" className="notif-dropdown-view-all" onClick={() => { navigate('/notifications'); onClose() }}>
-          View all
-        </button>
+        <div className="notif-dropdown-header-actions">
+          {hasUnread && (
+            <button
+              type="button"
+              className="notif-dropdown-mark-all"
+              disabled={markAllRead.isPending}
+              onClick={() => void markAllRead.mutateAsync().catch(() => toast('Could not mark notifications as read.'))}
+            >
+              <CheckCheck size={13} strokeWidth={2.7} aria-hidden="true" />
+              Mark all read
+            </button>
+          )}
+          <button type="button" className="notif-dropdown-view-all" onClick={() => { navigate('/notifications'); onClose() }}>
+            View all
+          </button>
+        </div>
       </div>
 
       <div className="notif-dropdown-list">
@@ -136,21 +192,25 @@ export default function NotificationsDropdown({ anchorRef, onClose }: Props) {
           <div className="notif-dropdown-empty">No notifications</div>
         )}
         {preview.map(n => (
-          <NotifItem key={n.id} n={n}
+          <NotifItem
+            key={n.id}
+            n={n}
             onCloseDropdown={onClose}
+            onMarkRead={id => void markOneRead.mutateAsync(id).catch(() => {})}
             onAccept={n.kind === 'contact_request' ? handleAccept : undefined}
             onDecline={n.kind === 'contact_request' ? handleDecline : undefined}
           />
         ))}
       </div>
 
-      <button type="button"
+      <button
+        type="button"
         className="notif-dropdown-footer"
         onClick={() => { navigate('/notifications'); onClose() }}
       >
         VIEW ALL NOTIFICATIONS
       </button>
     </div>,
-    document.body
+    document.body,
   )
 }

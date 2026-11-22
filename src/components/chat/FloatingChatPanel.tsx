@@ -1,37 +1,73 @@
 import { createPortal } from 'react-dom'
-import { useRef, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { AudioLines, Minus, X, Phone, Video } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
-import { useMessages } from '../../features/chat/useMessages'
-import { usePresence } from '../../features/presence/usePresence'
+import { useConversations } from '../../features/chat/useConversations'
 import { useFloatingChat, type FloatingChatEntry } from '../../features/chat/FloatingChatContext'
+import type { ConversationSummary } from '../../features/chat/conversationTypes'
+import { usePresence } from '../../features/presence/usePresence'
 import Avatar from '../ui/Avatar'
-import { useToast } from '../ui/Toast'
-import ChatComposer from './ChatComposer'
-import ChatMessageBubble from './ChatMessageBubble'
-import VoiceNoteConversationSettings from './VoiceNoteConversationSettings'
+import ConversationThread from './ConversationThread'
+import GroupAvatar from './group/GroupAvatar'
 
-function timeMsg(iso: string) {
-  const d = new Date(iso)
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+function buildFallbackSummary(entry: FloatingChatEntry, userId: string): ConversationSummary {
+  const now = new Date().toISOString()
+  if (entry.type === 'group') {
+    return {
+      id: entry.conversationId,
+      type: 'group',
+      name: entry.title || entry.otherName || 'Group chat',
+      status: 'active',
+      member_count: 3,
+      my_role: 'member',
+      voice_notes_allowed: true,
+      voice_policy_version: 1,
+      history_from_sequence: 1,
+      last_message_id: null,
+      last_message_sender_id: null,
+      last_message_at: null,
+      last_message_text: null,
+      last_message_kind: null,
+      last_system_event_type: null,
+      created_at: now,
+      updated_at: now,
+      my_last_read_at: null,
+      has_unread: false,
+      my_voice_notes_mode: 'inherit',
+    }
+  }
+  return {
+    id: entry.conversationId,
+    type: 'direct',
+    user_a: userId,
+    user_b: entry.otherId,
+    other: {
+      id: entry.otherId,
+      username: entry.otherUsername,
+      display_name: entry.otherName,
+      avatar_url: entry.otherAvatar,
+    },
+    last_message_id: null,
+    last_message_sender_id: null,
+    last_message_at: null,
+    last_message_text: null,
+    last_message_kind: null,
+    last_system_event_type: null,
+    created_at: now,
+    updated_at: now,
+    my_last_read_at: null,
+    has_unread: false,
+    my_voice_notes_mode: 'inherit',
+  }
 }
 
 function FloatingWindow({ entry, index }: { entry: FloatingChatEntry; index: number }) {
   const { user } = useAuth()
+  const { data: convs = [] } = useConversations(user?.id)
   const { closeChat, toggleMinimize } = useFloatingChat()
-  const { data: messages = [] } = useMessages(entry.conversationId, user?.id)
-  const presence = usePresence(entry.otherId)
-  const toast = useToast()
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const voiceSettingsButtonRef = useRef<HTMLButtonElement>(null)
-  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
+  const presence = usePresence(entry.type === 'group' ? '' : entry.otherId)
 
   const right = Math.min(18 + index * 356, Math.max(10, window.innerWidth - 360))
-
-  useEffect(() => {
-    if (!entry.minimized) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length, entry.minimized])
+  const label = entry.title || entry.otherName
 
   if (entry.minimized) {
     return (
@@ -40,126 +76,51 @@ function FloatingWindow({ entry, index }: { entry: FloatingChatEntry; index: num
           type="button"
           className="float-chat-min-toggle"
           onClick={() => toggleMinimize(entry.conversationId)}
-          aria-label={`Restore chat with ${entry.otherName}`}
+          aria-label={`Restore chat with ${label}`}
         >
           <span style={{ position: 'relative', flexShrink: 0 }}>
-            <Avatar name={entry.otherName} src={entry.otherAvatar} size="sm" />
-            <span style={{
-              position: 'absolute', bottom: -2, right: -2,
-              width: 9, height: 9,
-              background: presence.dotColor,
-              border: '2px solid #111111',
-            }} />
+            {entry.type === 'group' ? (
+              <GroupAvatar name={label} size={28} />
+            ) : (
+              <>
+                <Avatar name={entry.otherName} src={entry.otherAvatar} size="sm" />
+                <span style={{
+                  position: 'absolute', bottom: -2, right: -2,
+                  width: 9, height: 9,
+                  background: presence.dotColor,
+                  border: '2px solid #111111',
+                }} />
+              </>
+            )}
           </span>
-          <span className="float-chat-min-name">{entry.otherName}</span>
+          <span className="float-chat-min-name">{label}</span>
         </button>
         <button
           type="button"
           aria-label="Close chat"
-          style={{
-            width: 26, height: 26, flexShrink: 0,
-            background: 'var(--ink)', border: '2px solid var(--ink)',
-            color: 'var(--bg-panel)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          className="float-chat-close-btn"
           onClick={e => { e.stopPropagation(); closeChat(entry.conversationId) }}
         >
-          <X size={13} strokeWidth={3} />
+          <X size={13} strokeWidth={3} aria-hidden="true" />
         </button>
       </div>
     )
   }
 
+  const resolvedConversation =
+    convs.find(c => c.id === entry.conversationId)
+    ?? buildFallbackSummary(entry, user?.id ?? '')
+
   return (
     <div className="float-chat" style={{ right }}>
-      <div className="fc-head">
-        <Link
-          to={`/profile/${entry.otherUsername}`}
-          title={`View ${entry.otherName}'s profile`}
-          style={{ position: 'relative', flexShrink: 0, display: 'block', textDecoration: 'none' }}
-        >
-          <Avatar name={entry.otherName} src={entry.otherAvatar} size="sm" />
-          <div style={{
-            position: 'absolute', bottom: -2, right: -2,
-            width: 9, height: 9,
-            background: presence.dotColor,
-            border: '2px solid #111111',
-          }} />
-        </Link>
-        <Link
-          to={`/profile/${entry.otherUsername}`}
-          style={{ flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
-        >
-          <div style={{ fontWeight: 800, fontSize: 13, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {entry.otherName}
-          </div>
-          <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: presence.color, letterSpacing: '.04em' }}>
-            {presence.label || (presence.status === 'offline' ? 'OFFLINE' : 'ACTIVE')}
-          </div>
-        </Link>
-        <button
-          ref={voiceSettingsButtonRef}
-          className="fc-icon"
-          type="button"
-          title="Voice note settings"
-          aria-label="Voice note settings"
-          aria-haspopup="dialog"
-          aria-expanded={voiceSettingsOpen}
-          onClick={() => setVoiceSettingsOpen(true)}
-        >
-          <AudioLines size={13} strokeWidth={2.7} aria-hidden="true" />
-        </button>
-        <button className="fc-icon fc-call" type="button" title="Call" onClick={() => toast('Calls coming soon')}>
-          <Phone size={13} strokeWidth={2.5} />
-        </button>
-        <button className="fc-icon fc-video" type="button" title="Video" onClick={() => toast('Video coming soon')}>
-          <Video size={13} strokeWidth={2.5} />
-        </button>
-        <button className="fc-icon" type="button" title="Minimize" onClick={() => toggleMinimize(entry.conversationId)}>
-          <Minus size={12} strokeWidth={2.5} />
-        </button>
-        <button className="fc-icon" type="button" title="Close" onClick={() => closeChat(entry.conversationId)}>
-          <X size={12} strokeWidth={2.5} />
-        </button>
-      </div>
-
-      <div className="fc-msgs">
-        {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '20px 10px', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-mute)' }}>
-            Be the first to write
-          </div>
-        )}
-        {messages.map(m => {
-          const isMe = m.sender_id === user?.id
-          return (
-            <ChatMessageBubble
-              key={m.id}
-              message={m}
-              isMine={isMe}
-              time={timeMsg(m.created_at)}
-              sentLabel=" sent"
-              compact
-            />
-          )
-        })}
-        <div ref={bottomRef} />
-      </div>
-
-      <ChatComposer
-        conversationId={entry.conversationId}
+      <ConversationThread
+        conversation={resolvedConversation}
         userId={user?.id ?? ''}
-        compact
-        onAttach={() => toast('Attachments coming soon')}
+        variant="floating"
+        onMinimize={() => toggleMinimize(entry.conversationId)}
+        onClose={() => closeChat(entry.conversationId)}
+        onRevoked={() => closeChat(entry.conversationId)}
       />
-      {voiceSettingsOpen && user?.id && (
-        <VoiceNoteConversationSettings
-          conversationId={entry.conversationId}
-          userId={user.id}
-          otherName={entry.otherName}
-          onClose={() => setVoiceSettingsOpen(false)}
-          anchorRef={voiceSettingsButtonRef}
-        />
-      )}
     </div>
   )
 }
@@ -174,6 +135,6 @@ export default function FloatingChats() {
         <FloatingWindow key={entry.conversationId} entry={entry} index={i} />
       ))}
     </>,
-    document.body
+    document.body,
   )
 }

@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { LoaderCircle, Mic, MicOff, Paperclip, Send, Smile, Square, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { LoaderCircle, Lock, Mic, MicOff, Paperclip, Send, Smile } from 'lucide-react'
+import { mapGroupChatError, type ConversationKind } from '../../features/chat/conversationTypes'
 import { useSendMessage } from '../../features/chat/useMessages'
 import { useSendVoiceMessage } from '../../features/chat/useSendVoiceMessage'
 import { useVoiceRecorder } from '../../features/chat/useVoiceRecorder'
-import { formatVoiceDuration } from '../../features/chat/voiceFormats'
-import VoiceAudioControl from './VoiceAudioControl'
 import EmojiPickerPopover from './EmojiPickerPopover'
+import VoiceRecordingBar from './VoiceRecordingBar'
 import {
+  GROUP_VOICE_DISABLED_MESSAGE,
   isVoiceNotesBlockedError,
   useVoiceNoteCapability,
   VOICE_NOTES_BLOCKED_MESSAGE,
@@ -15,6 +16,10 @@ import {
 interface ChatComposerProps {
   conversationId: string
   userId: string
+  conversationType?: ConversationKind
+  groupVoiceDisabled?: boolean
+  groupPolicyVersion?: number
+  disabledReason?: string | null
   compact?: boolean
   onAttach?: () => void
 }
@@ -22,6 +27,10 @@ interface ChatComposerProps {
 export default function ChatComposer({
   conversationId,
   userId,
+  conversationType = 'direct',
+  groupVoiceDisabled = false,
+  groupPolicyVersion,
+  disabledReason = null,
   compact = false,
   onAttach,
 }: ChatComposerProps) {
@@ -29,19 +38,17 @@ export default function ChatComposer({
   const [sendError, setSendError] = useState<string | null>(null)
   const [isPreparingVoice, setIsPreparingVoice] = useState(false)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
-  const stopButtonRef = useRef<HTMLButtonElement>(null)
+  const [voiceTooltipOpen, setVoiceTooltipOpen] = useState(false)
+  const voiceTooltipId = useId()
+  const voiceWrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const voiceStartPendingRef = useRef(false)
   const voiceStartAttemptRef = useRef(0)
-  const sendText = useSendMessage(conversationId, userId)
-  const sendVoice = useSendVoiceMessage(conversationId, userId)
+  const sendText = useSendMessage(conversationId, userId, conversationType)
+  const sendVoice = useSendVoiceMessage(conversationId, userId, conversationType)
   const voice = useVoiceRecorder()
   const voicePermission = useVoiceNoteCapability(conversationId)
-
-  useEffect(() => {
-    if (voice.phase === 'recording') stopButtonRef.current?.focus({ preventScroll: true })
-  }, [voice.phase])
 
   useEffect(() => () => {
     voiceStartAttemptRef.current += 1
@@ -52,6 +59,32 @@ export default function ChatComposer({
     setEmojiPickerOpen(false)
     if (restoreFocus) requestAnimationFrame(() => emojiButtonRef.current?.focus({ preventScroll: true }))
   }, [])
+
+  if (disabledReason) {
+    return (
+      <div className={`chat-composer chat-composer-closed${compact ? ' compact' : ''}`} role="status">
+        <Lock size={15} strokeWidth={2.6} aria-hidden="true" />
+        <span>{disabledReason}</span>
+      </div>
+    )
+  }
+
+  const isGroup = conversationType === 'group'
+  const blockedByPolicy =
+    (isGroup && groupVoiceDisabled)
+    || voicePermission.data?.allowed === false
+  const blockedNotice = isGroup && (groupVoiceDisabled || voicePermission.data?.reason === 'group_voice_disabled')
+    ? GROUP_VOICE_DISABLED_MESSAGE
+    : VOICE_NOTES_BLOCKED_MESSAGE
+  const voiceBlockedReason = blockedByPolicy
+    ? blockedNotice
+    : !voice.isSupported
+      ? 'Voice recording is unavailable on this browser. Text messages still work.'
+      : voicePermission.isError
+        ? 'Could not verify voice-note permission. Click to check again.'
+        : null
+  const isVoiceUnavailable = Boolean(voiceBlockedReason)
+  const isVoiceBusy = isPreparingVoice || voicePermission.isFetching
 
   function handleEmojiSelect(emoji: string) {
     const input = inputRef.current
@@ -76,8 +109,12 @@ export default function ChatComposer({
     try {
       await sendText.mutateAsync(body)
       setText('')
-    } catch {
-      setSendError('The message could not be sent. Please try again.')
+    } catch (error) {
+      setSendError(
+        isGroup
+          ? mapGroupChatError(error, 'The message could not be sent. Please try again.')
+          : 'The message could not be sent. Please try again.',
+      )
     }
   }
 
@@ -85,12 +122,24 @@ export default function ChatComposer({
     if (!voice.draft || sendVoice.isPending) return
     setSendError(null)
     try {
-      await sendVoice.mutateAsync({ draft: voice.draft })
+      await sendVoice.mutateAsync({
+        draft: voice.draft,
+        expectedPolicyVersion: voicePermission.data?.policyVersion ?? groupPolicyVersion,
+      })
       voice.discard()
     } catch (error) {
-      setSendError(isVoiceNotesBlockedError(error)
-        ? `${VOICE_NOTES_BLOCKED_MESSAGE} Your recording was not uploaded.`
-        : 'The voice note could not be sent. Your recording is still here to retry.')
+      if (isVoiceNotesBlockedError(error)) {
+        const message = isGroup
+          ? mapGroupChatError(error, GROUP_VOICE_DISABLED_MESSAGE)
+          : VOICE_NOTES_BLOCKED_MESSAGE
+        setSendError(`${message} Your recording was not uploaded.`)
+      } else {
+        setSendError(
+          isGroup
+            ? mapGroupChatError(error, 'The voice note could not be sent. Your recording is still here to retry.')
+            : 'The voice note could not be sent. Your recording is still here to retry.',
+        )
+      }
     }
   }
 
@@ -107,8 +156,12 @@ export default function ChatComposer({
         setSendError('Could not verify whether this chat accepts voice notes. Try again.')
         return
       }
-      if (!result.data?.allowed) {
-        setSendError(VOICE_NOTES_BLOCKED_MESSAGE)
+      if (!result.data?.allowed || (isGroup && groupVoiceDisabled)) {
+        setSendError(
+          isGroup && (result.data?.reason === 'group_voice_disabled' || groupVoiceDisabled)
+            ? GROUP_VOICE_DISABLED_MESSAGE
+            : VOICE_NOTES_BLOCKED_MESSAGE,
+        )
         return
       }
       await voice.start()
@@ -120,68 +173,19 @@ export default function ChatComposer({
     }
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter') void handleTextSend()
-  }
-
-  if (voice.phase === 'requesting' || voice.phase === 'recording') {
+  if (voice.phase === 'requesting' || voice.phase === 'recording' || voice.draft) {
     return (
-      <div
-        className={`chat-composer voice-compose recording${compact ? ' compact' : ''}`}
-        onKeyDown={event => { if (event.key === 'Escape') voice.discard() }}
-      >
-        <div className="voice-record-status" role="status" aria-live="polite">
-          {voice.phase === 'requesting' ? (
-            <><LoaderCircle className="voice-spinner" size={17} aria-hidden="true" /> CONNECTING MIC</>
-          ) : (
-            <><span className="voice-record-dot" aria-hidden="true" /> REC</>
-          )}
-        </div>
-        <span className="voice-record-time" aria-label={`Recording duration ${formatVoiceDuration(voice.elapsedMs)}`}>
-          {formatVoiceDuration(voice.elapsedMs)}
-        </span>
-        <button type="button" className="voice-text-btn" onClick={voice.discard} aria-label="Cancel voice recording">
-          <X size={16} aria-hidden="true" /> <span>Cancel</span>
-        </button>
-        <button
-          ref={stopButtonRef}
-          type="button"
-          className="voice-stop-btn"
-          onClick={voice.stop}
-          disabled={voice.phase !== 'recording'}
-          aria-label="Stop voice recording"
-          autoFocus={voice.phase === 'recording'}
-        >
-          <Square size={14} fill="currentColor" aria-hidden="true" /> <span>Stop</span>
-        </button>
-      </div>
-    )
-  }
-
-  if (voice.draft) {
-    return (
-      <div className={`chat-composer voice-compose preview${compact ? ' compact' : ''}`}>
-        <VoiceAudioControl
-          durationMs={voice.draft.durationMs}
-          src={voice.draft.previewUrl}
-          label="voice note preview"
-        />
-        <button type="button" className="voice-delete-btn" onClick={voice.discard} aria-label="Discard voice note">
-          <Trash2 size={16} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className="voice-send-btn"
-          onClick={handleVoiceSend}
-          disabled={sendVoice.isPending}
-          aria-label={sendVoice.isPending ? 'Sending voice note' : 'Send voice note'}
-        >
-          {sendVoice.isPending
-            ? <LoaderCircle className="voice-spinner" size={17} aria-hidden="true" />
-            : <Send size={17} aria-hidden="true" />}
-        </button>
-        {sendError && <div className="voice-compose-error" role="alert">{sendError}</div>}
-      </div>
+      <VoiceRecordingBar
+        phase={voice.phase}
+        elapsedMs={voice.elapsedMs}
+        draft={voice.draft}
+        compact={compact}
+        isSending={sendVoice.isPending}
+        sendError={sendError}
+        onStop={voice.stop}
+        onDiscard={voice.discard}
+        onSend={() => void handleVoiceSend()}
+      />
     )
   }
 
@@ -194,7 +198,7 @@ export default function ChatComposer({
         ref={inputRef}
         value={text}
         onChange={event => { setText(event.target.value); setSendError(null) }}
-        onKeyDown={handleKeyDown}
+        onKeyDown={event => { if (event.key === 'Enter') void handleTextSend() }}
         placeholder="Message…"
         aria-label="Message"
       />
@@ -216,7 +220,7 @@ export default function ChatComposer({
         <button
           type="button"
           className="chat-composer-send"
-          onClick={handleTextSend}
+          onClick={() => void handleTextSend()}
           disabled={sendText.isPending}
           aria-label={sendText.isPending ? 'Sending message' : 'Send message'}
         >
@@ -225,30 +229,68 @@ export default function ChatComposer({
             : <Send size={17} strokeWidth={2.5} aria-hidden="true" />}
         </button>
       ) : (
-        <button
-          type="button"
-          className="chat-composer-mic"
-          onClick={() => void handleVoiceStart()}
-          disabled={!voice.isSupported || isPreparingVoice || voicePermission.isFetching || voicePermission.data?.allowed === false || voicePermission.isError}
-          aria-label={voicePermission.data?.allowed === false
-            ? 'Voice notes are disabled by the recipient'
-            : voice.isSupported ? 'Record voice message' : 'Voice recording unavailable'}
-          title={voicePermission.data?.allowed === false
-            ? VOICE_NOTES_BLOCKED_MESSAGE
-            : voice.isSupported ? 'Record voice message' : 'Voice recording is not supported by this browser'}
+        <div
+          ref={voiceWrapRef}
+          className="voice-mic-wrap"
+          onMouseEnter={() => { if (isVoiceUnavailable) setVoiceTooltipOpen(true) }}
+          onMouseLeave={() => setVoiceTooltipOpen(false)}
+          onBlur={event => {
+            if (!voiceWrapRef.current?.contains(event.relatedTarget as Node | null)) {
+              setVoiceTooltipOpen(false)
+            }
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Escape' && voiceTooltipOpen) {
+              event.stopPropagation()
+              setVoiceTooltipOpen(false)
+            }
+          }}
         >
-          {isPreparingVoice || voicePermission.isFetching
-            ? <LoaderCircle className="voice-spinner" size={17} aria-hidden="true" />
-            : <Mic size={17} strokeWidth={2.7} aria-hidden="true" />}
-        </button>
-      )}
-      {(voicePermission.data?.allowed === false || voicePermission.isError) && !voice.error && !sendError && (
-        <div className="voice-compose-notice" role="status">
-          <MicOff size={14} aria-hidden="true" />
-          <span>{voicePermission.data?.allowed === false
-            ? VOICE_NOTES_BLOCKED_MESSAGE
-            : 'Could not verify voice-note permission.'}</span>
-          <button type="button" onClick={() => void voicePermission.refetch()}>Check again</button>
+          <button
+            type="button"
+            className={`chat-composer-mic${isVoiceUnavailable ? ' is-blocked' : ''}`}
+            aria-disabled={isVoiceUnavailable || isVoiceBusy ? 'true' : undefined}
+            aria-describedby={isVoiceUnavailable ? voiceTooltipId : undefined}
+            onFocus={() => { if (isVoiceUnavailable) setVoiceTooltipOpen(true) }}
+            onClick={() => {
+              if (voicePermission.isError && !blockedByPolicy && !voicePermission.isFetching) {
+                setVoiceTooltipOpen(false)
+                void voicePermission.refetch()
+                return
+              }
+              if (isVoiceUnavailable) {
+                setVoiceTooltipOpen(open => !open)
+                return
+              }
+              if (isVoiceBusy) return
+              void handleVoiceStart()
+            }}
+            aria-label={
+              blockedByPolicy
+                ? isGroup
+                  ? 'Voice notes are disabled in this group'
+                  : 'Voice notes are disabled by the recipient'
+                : voicePermission.isError
+                  ? 'Could not verify voice-note permission'
+                  : voice.isSupported
+                    ? 'Record voice message'
+                    : 'Voice recording unavailable on this device'
+            }
+          >
+            {isVoiceBusy ? (
+              <LoaderCircle className="voice-spinner" size={17} aria-hidden="true" />
+            ) : isVoiceUnavailable ? (
+              <MicOff size={17} strokeWidth={2.7} aria-hidden="true" />
+            ) : (
+              <Mic size={17} strokeWidth={2.7} aria-hidden="true" />
+            )}
+          </button>
+          {isVoiceUnavailable && voiceTooltipOpen && voiceBlockedReason && (
+            <div id={voiceTooltipId} role="tooltip" className="voice-mic-tooltip">
+              <MicOff size={13} strokeWidth={2.7} aria-hidden="true" />
+              <span>{voiceBlockedReason}</span>
+            </div>
+          )}
         </div>
       )}
       {(voice.error || sendError) && (

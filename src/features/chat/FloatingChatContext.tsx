@@ -1,7 +1,10 @@
 import { createContext, use, useCallback, useMemo, useState } from 'react'
+import type { ConversationKind } from './conversationTypes'
 
 export interface FloatingChatEntry {
   conversationId: string
+  type?: ConversationKind
+  title?: string
   otherId: string
   otherName: string
   otherUsername: string
@@ -27,7 +30,7 @@ export function FloatingChatProvider({ children }: { children: React.ReactNode }
     setChats(prev => {
       const exists = prev.find(c => c.conversationId === entry.conversationId)
       if (exists) {
-        return prev.map(c => c.conversationId === entry.conversationId ? { ...c, minimized: false } : c)
+        return prev.map(c => c.conversationId === entry.conversationId ? { ...c, ...entry, minimized: false } : c)
       }
       return [...prev, { ...entry, minimized: false }]
     })

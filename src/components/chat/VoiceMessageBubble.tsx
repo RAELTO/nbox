@@ -3,7 +3,13 @@ import type { MessageAttachmentRow } from '../../features/chat/useMessages'
 import { CHAT_MEDIA_BUCKET } from '../../features/chat/voiceFormats'
 import VoiceAudioControl from './VoiceAudioControl'
 
-export default function VoiceMessageBubble({ attachment }: { attachment?: MessageAttachmentRow }) {
+export default function VoiceMessageBubble({
+  attachment,
+  ttlSeconds = 5 * 60,
+}: {
+  attachment?: MessageAttachmentRow
+  ttlSeconds?: number
+}) {
   if (!attachment) {
     return <div className="voice-message-error" role="alert">Voice note unavailable</div>
   }
@@ -12,7 +18,7 @@ export default function VoiceMessageBubble({ attachment }: { attachment?: Messag
   async function requestSource() {
     const { data, error: signedUrlError } = await supabase.storage
       .from(CHAT_MEDIA_BUCKET)
-      .createSignedUrl(voiceAttachment.storage_path, 5 * 60)
+      .createSignedUrl(voiceAttachment.storage_path, ttlSeconds)
     if (signedUrlError || !data?.signedUrl) {
       throw signedUrlError ?? new Error('Missing signed URL')
     }

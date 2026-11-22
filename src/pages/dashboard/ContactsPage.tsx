@@ -52,8 +52,8 @@ function IncomingCard({ req, onAccept, onDecline }: {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      padding: '14px 16px', borderBottom: '2px solid var(--ink)',
-      background: 'var(--accent-2)',
+      padding: '14px 16px', borderBottom: '2px solid var(--line)',
+      background: 'var(--accent-2)', color: 'var(--on-accent-2)',
     }}>
       <Link to={`/profile/${req.requester.username}`} style={{ display: 'flex', textDecoration: 'none' }}>
         <Avatar name={req.requester.display_name} src={req.requester.avatar_url} size="md" />
@@ -63,10 +63,10 @@ function IncomingCard({ req, onAccept, onDecline }: {
         style={{ flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
       >
         <div style={{ fontWeight: 800, fontSize: 14 }}>{req.requester.display_name}</div>
-        <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-dim)' }}>
+        <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', opacity: 0.85 }}>
           @{req.requester.username} · {timeAgo(req.created_at)}
         </div>
-        <div style={{ fontSize: 12, marginTop: 2, color: 'var(--ink-dim)' }}>
+        <div style={{ fontSize: 12, marginTop: 2, opacity: 0.85 }}>
           wants to add you as a contact
         </div>
       </Link>
@@ -96,14 +96,16 @@ function OutgoingCard({ req, onCancel }: {
   const label = req.status === 'accepted' ? '✓ Accepted'
     : req.status === 'declined' ? '✕ Declined'
     : 'Pending'
-  const bg = req.status === 'accepted' ? 'var(--accent-4)'
-    : req.status === 'declined' ? 'var(--accent-1)'
-    : 'var(--bg-alt)'
+  const badgeColors = req.status === 'accepted'
+    ? { background: 'var(--accent-4)', color: 'var(--on-accent-4)' }
+    : req.status === 'declined'
+      ? { background: 'var(--accent-1)', color: 'var(--on-accent-1)' }
+      : { background: 'var(--bg-alt)', color: 'var(--ink)' }
 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      padding: '14px 16px', borderBottom: '2px solid var(--ink)',
+      padding: '14px 16px', borderBottom: '2px solid var(--line)',
     }}>
       <Link to={`/profile/${req.addressee.username}`} style={{ display: 'flex', textDecoration: 'none' }}>
         <Avatar name={req.addressee.display_name} src={req.addressee.avatar_url} size="md" />
@@ -118,8 +120,8 @@ function OutgoingCard({ req, onCancel }: {
         </div>
       </Link>
       <div style={{
-        padding: '3px 10px', border: '2px solid var(--ink)',
-        background: bg, fontSize: 12, fontFamily: 'var(--font-mono)',
+        padding: '3px 10px', border: '2px solid var(--line)',
+        ...badgeColors, fontSize: 12, fontFamily: 'var(--font-mono)',
         fontWeight: 800, whiteSpace: 'nowrap',
       }}>
         {label}

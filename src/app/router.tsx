@@ -1,15 +1,18 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import FloatingChats from '../components/chat/FloatingChatPanel'
+import { useFloatingChat } from '../features/chat/FloatingChatContext'
 import RequireAuth from '../components/auth/RequireAuth'
 import LoginPage from '../pages/public/LoginPage'
 
+const FloatingChats = lazy(() => import('../components/chat/FloatingChatPanel'))
 const HomePage = lazy(() => import('../pages/public/HomePage'))
 const CheckEmailPage = lazy(() => import('../pages/public/CheckEmailPage'))
 const TagPage = lazy(() => import('../pages/public/TagPage'))
 const ProfilePage = lazy(() => import('../pages/dashboard/ProfilePage'))
 const UserProfilePage = lazy(() => import('../pages/public/UserProfilePage'))
 const ContactsPage = lazy(() => import('../pages/dashboard/ContactsPage'))
+const GroupsPage = lazy(() => import('../pages/dashboard/GroupsPage'))
+const GroupDetailPage = lazy(() => import('../pages/dashboard/GroupDetailPage'))
 const InboxPage = lazy(() => import('../pages/dashboard/InboxPage'))
 const SavedPage = lazy(() => import('../pages/dashboard/SavedPage'))
 const MenuPage = lazy(() => import('../pages/dashboard/MenuPage'))
@@ -18,18 +21,24 @@ const NotificationsPage = lazy(() => import('../pages/public/NotificationsPage')
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 const ResetPasswordPage = lazy(() => import('../pages/public/ResetPasswordPage'))
 
-function Fallback() {
+function FloatingChatsHost() {
+  const { chats } = useFloatingChat()
+  if (chats.length === 0) return null
   return (
-    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--ink-mute)' }}>
-      Loading…
-    </div>
+    <Suspense fallback={null}>
+      <FloatingChats />
+    </Suspense>
   )
+}
+
+function Fallback() {
+  return <div className="router-fallback">Loading…</div>
 }
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <FloatingChats />
+      <FloatingChatsHost />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/check-email" element={<Suspense fallback={<Fallback />}><CheckEmailPage /></Suspense>} />
@@ -41,6 +50,8 @@ export default function AppRouter() {
           <Route path="/explore" element={<Suspense fallback={<Fallback />}><HomePage /></Suspense>} />
           <Route path="/notifications" element={<Suspense fallback={<Fallback />}><NotificationsPage /></Suspense>} />
           <Route path="/contacts" element={<Suspense fallback={<Fallback />}><ContactsPage /></Suspense>} />
+          <Route path="/groups" element={<Suspense fallback={<Fallback />}><GroupsPage /></Suspense>} />
+          <Route path="/groups/:slug" element={<Suspense fallback={<Fallback />}><GroupDetailPage /></Suspense>} />
           <Route path="/nbox" element={<Suspense fallback={<Fallback />}><InboxPage /></Suspense>} />
           <Route path="/yo" element={<Suspense fallback={<Fallback />}><MenuPage /></Suspense>} />
           <Route path="/tag/:slug" element={<Suspense fallback={<Fallback />}><TagPage /></Suspense>} />

@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Share2, Link, MessageCircle, Users, Smartphone, Check } from 'lucide-react'
+import { X, Share2, Link, MessageCircle, Users, Smartphone, Check, ChevronDown } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useCreateBox } from '../../features/boxes/useBoxes'
 import { useRecordShare } from '../../features/shares/useShares'
@@ -48,7 +48,7 @@ export default function ShareModal({ boxId, boxContent, onClose }: Props) {
 
   async function handleWhatsApp() {
     const text = encodeURIComponent(`${boxContent.slice(0, 100)}…\n\n${shareUrl}`)
-    window.open(`https://wa.me/?text=${text}`, '_blank')
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer')
     if (user) await recordShare.mutateAsync({ userId: user.id, shareType: 'whatsapp' }).catch(() => {})
     onClose()
   }
@@ -146,7 +146,7 @@ export default function ShareModal({ boxId, boxContent, onClose }: Props) {
               </div>
               {opt.id === 'feed' && (
                 <span className="share-option-chevron" style={{ transform: feedOpen ? 'rotate(180deg)' : 'none' }}>
-                  v
+                  <ChevronDown size={15} strokeWidth={2.8} aria-hidden="true" />
                 </span>
               )}
             </button>

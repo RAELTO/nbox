@@ -1,22 +1,27 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import type { ConversationKind } from './conversationTypes'
 import type { VoiceDraft } from './useVoiceRecorder'
 import { CHAT_MEDIA_BUCKET } from './voiceFormats'
 import { assertVoiceNoteAllowed, VoiceNotesBlockedError } from './useVoiceNotePolicies'
 
 interface SendVoiceInput {
   draft: VoiceDraft
+  expectedPolicyVersion?: number
 }
 
-export function useSendVoiceMessage(conversationId: string, userId: string) {
+export function useSendVoiceMessage(
+  conversationId: string,
+  userId: string,
+  conversationType: ConversationKind = 'direct',
+) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ draft }: SendVoiceInput) => {
-      // Preflight avoids uploading audio the recipient has chosen not to receive.
-      // The publishing RPC repeats this check to close the race between preflight
-      // and the final write.
-      await assertVoiceNoteAllowed(conversationId)
+    mutationFn: async ({ draft, expectedPolicyVersion }: SendVoiceInput) => {
+      // Preflight avoids uploading audio when blocked by recipient or group policy.
+      // The publishing RPC repeats this check under transaction lock.
+      const capability = await assertVoiceNoteAllowed(conversationId)
 
       const messageId = crypto.randomUUID()
       const attachmentId = crypto.randomUUID()
@@ -35,25 +40,38 @@ export function useSendVoiceMessage(conversationId: string, userId: string) {
         throw uploadError
       }
 
-      const { error: messageError } = await supabase.rpc('create_voice_message', {
-        p_message_id: messageId,
-        p_attachment_id: attachmentId,
-        p_conversation_id: conversationId,
-        p_storage_path: storagePath,
-        p_mime_type: draft.mimeType,
-        p_size_bytes: draft.sizeBytes,
-        p_duration_ms: Math.round(draft.durationMs),
-      })
+      const publishResult = conversationType === 'group'
+        ? await supabase.rpc('publish_group_voice_message', {
+            p_message_id: messageId,
+            p_attachment_id: attachmentId,
+            p_conversation_id: conversationId,
+            p_storage_path: storagePath,
+            p_mime_type: draft.mimeType,
+            p_size_bytes: draft.sizeBytes,
+            p_duration_ms: Math.round(draft.durationMs),
+            p_client_request_id: crypto.randomUUID(),
+            p_expected_policy_version: expectedPolicyVersion ?? capability.policyVersion ?? 1,
+          })
+        : await supabase.rpc('create_voice_message', {
+            p_message_id: messageId,
+            p_attachment_id: attachmentId,
+            p_conversation_id: conversationId,
+            p_storage_path: storagePath,
+            p_mime_type: draft.mimeType,
+            p_size_bytes: draft.sizeBytes,
+            p_duration_ms: Math.round(draft.durationMs),
+          })
 
-      if (messageError) {
+      if (publishResult.error) {
         await supabase.storage.from(CHAT_MEDIA_BUCKET).remove([storagePath])
-        throw messageError
+        throw publishResult.error
       }
       return messageId
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] })
       queryClient.invalidateQueries({ queryKey: ['conversations', userId] })
+      queryClient.invalidateQueries({ queryKey: ['group-voice-state', conversationId] })
     },
   })
 }

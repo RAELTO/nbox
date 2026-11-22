@@ -1,8 +1,9 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useBoxFeed, useDeleteBox, useSearchBoxes, type FeedMode } from '../../features/boxes/useBoxes'
 import { useBoxEngagement } from '../../features/boxes/useBoxEngagement'
+import { groupStoriesByAuthor, useActiveStories } from '../../features/stories/useStories'
 import AppShell from '../../components/layout/AppShell'
 import LeftSidebar from '../../components/layout/LeftSidebar'
 import RightSidebar from '../../components/layout/RightSidebar'
@@ -15,6 +16,8 @@ import { useToast } from '../../components/ui/Toast'
 import type { BoxType } from '../../types/database'
 
 const DropModal = lazy(() => import('../../components/feed/DropModal'))
+const CreateStoryModal = lazy(() => import('../../components/feed/CreateStoryModal'))
+const StoryViewerModal = lazy(() => import('../../components/feed/StoryViewerModal'))
 
 function EmptyFeed({ mode }: { mode: FeedMode }) {
   return (
@@ -37,10 +40,17 @@ export default function HomePage() {
   const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<FeedMode>('foryou')
   const [dropOpen, setDropOpen] = useState<BoxType | null>(null)
+  const [createStoryOpen, setCreateStoryOpen] = useState(false)
+  const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null)
   const toast = useToast()
   const searchQuery = (searchParams.get('q') ?? '').trim()
   const hasSearch = searchQuery.length >= 2
 
+  const storiesQuery = useActiveStories(user?.id)
+  const storyGroups = useMemo(
+    () => groupStoriesByAuthor(storiesQuery.data ?? [], user?.id),
+    [storiesQuery.data, user?.id],
+  )
   const feedQuery = useBoxFeed(mode, user?.id)
   const searchBoxesQuery = useSearchBoxes(searchQuery)
   const boxes = hasSearch ? searchBoxesQuery.data : feedQuery.data
@@ -70,7 +80,16 @@ export default function HomePage() {
       >
         {!hasSearch && (
           <>
-            <StoriesRail onCreateStory={() => toast('Stories coming soon')} />
+            <StoriesRail
+              groups={storyGroups}
+              currentUserId={user?.id}
+              isLoading={storiesQuery.isLoading}
+              onCreateStory={() => {
+                if (!user) { toast('Sign in to post a story.'); return }
+                setCreateStoryOpen(true)
+              }}
+              onOpenGroup={index => setViewerGroupIndex(index)}
+            />
             <ComposerCard onOpenModal={openDrop} />
             <ModeSelector value={mode} onChange={setMode} />
           </>
@@ -130,6 +149,23 @@ export default function HomePage() {
           <DropModal
             initialType={dropOpen}
             onClose={() => setDropOpen(null)}
+          />
+        </Suspense>
+      )}
+
+      {createStoryOpen && (
+        <Suspense fallback={null}>
+          <CreateStoryModal onClose={() => setCreateStoryOpen(false)} />
+        </Suspense>
+      )}
+
+      {viewerGroupIndex !== null && storyGroups.length > 0 && (
+        <Suspense fallback={null}>
+          <StoryViewerModal
+            groups={storyGroups}
+            initialGroupIndex={viewerGroupIndex}
+            currentUserId={user?.id}
+            onClose={() => setViewerGroupIndex(null)}
           />
         </Suspense>
       )}
