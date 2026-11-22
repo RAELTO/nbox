@@ -1,189 +1,26 @@
-import { useRef, useState, useEffect, useLayoutEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Phone, Video, ArrowLeft, AudioLines, Mail } from 'lucide-react'
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Mail, Plus, Users } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useConversations } from '../../features/chat/useConversations'
-import { useMessages } from '../../features/chat/useMessages'
-import { usePresence, usePresenceMap } from '../../features/presence/usePresence'
+import { usePresenceMap } from '../../features/presence/usePresence'
 import AppShell from '../../components/layout/AppShell'
 import LeftSidebar from '../../components/layout/LeftSidebar'
 import RightSidebar from '../../components/layout/RightSidebar'
-import { useToast } from '../../components/ui/Toast'
-import ChatComposer from '../../components/chat/ChatComposer'
-import ChatMessageBubble from '../../components/chat/ChatMessageBubble'
-import VoiceNoteConversationSettings from '../../components/chat/VoiceNoteConversationSettings'
+import ConversationListItem from '../../components/chat/ConversationListItem'
+import ConversationThread from '../../components/chat/ConversationThread'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = [
-  'var(--accent-1)', 'var(--accent-3)', 'var(--accent-4)',
-  'var(--accent-5)', 'var(--accent-2)',
-]
-function strColor(str: string) {
-  let h = 0
-  for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
-}
+const CreateGroupDialog = lazy(() => import('../../components/chat/group/CreateGroupDialog'))
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 1)  return 'now'
-  if (min < 60) return `${min}m`
-  const h = Math.floor(min / 60)
-  if (h < 24)   return `${h}h`
-  const d = Math.floor(h / 24)
-  if (d < 7)    return `${d}d`
-  return new Date(iso).toLocaleDateString('en', { day: 'numeric', month: 'short' })
-}
+type InboxFilter = 'all' | 'direct' | 'group'
 
-function msgTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
-}
-
-function dayLabel(iso: string) {
-  const d = new Date(iso)
-  const today = new Date()
-  if (d.toDateString() === today.toDateString()) return 'TODAY'
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return 'YESTERDAY'
-  return d.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()
-}
-
-// ─── Sq avatar ────────────────────────────────────────────────────────────────
-function SqAvatar({ name, size = 44 }: { name: string; size?: number }) {
-  return (
-    <div
-      className="sq-avatar"
-      style={{ width: size, height: size, background: strColor(name), fontSize: size * 0.38 }}
-    >
-      {name.charAt(0).toUpperCase()}
-    </div>
-  )
-}
-
-// ─── Action button ─────────────────────────────────────────────────────────────
-function ActionBtn({ children, title, onClick, disabled }: {
-  children: React.ReactNode
-  title?: string
-  onClick?: () => void
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      className="inbox-action-btn"
-    >
-      {children}
-    </button>
-  )
-}
-
-// ─── Thread panel ─────────────────────────────────────────────────────────────
-function ThreadPanel({ conversationId, userId, otherId, otherName, otherUsername, onBack }: {
-  conversationId: string; userId: string; otherId: string
-  otherName: string; otherUsername: string; onBack: () => void
-}) {
-  const { data: messages = [] } = useMessages(conversationId, userId)
-  const presence = usePresence(otherId)
-  const toast    = useToast()
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const voiceSettingsButtonRef = useRef<HTMLButtonElement>(null)
-  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length])
-
-  return (
-    <main className="chat-thread">
-      {/* Header */}
-      <div className="chat-thread-head">
-        <button type="button" data-mobile-back onClick={onBack}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: 4, marginRight: 2 }}>
-          <ArrowLeft size={16} strokeWidth={2.5} />
-        </button>
-        <Link to={`/profile/${otherUsername}`} style={{ display: 'flex', textDecoration: 'none' }}>
-          <SqAvatar name={otherName} size={40} />
-        </Link>
-        <Link
-          to={`/profile/${otherUsername}`}
-          style={{ flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
-        >
-          <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>{otherName}</div>
-          <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: presence.color, letterSpacing: '.04em', marginTop: 1 }}>
-            {presence.label || (presence.status === 'offline' ? '● OFFLINE' : '● ACTIVE')}
-          </div>
-        </Link>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            ref={voiceSettingsButtonRef}
-            type="button"
-            className="inbox-action-btn"
-            title="Voice note settings"
-            aria-label="Voice note settings"
-            aria-haspopup="dialog"
-            aria-expanded={voiceSettingsOpen}
-            onClick={() => setVoiceSettingsOpen(true)}
-          >
-            <AudioLines size={16} strokeWidth={2.7} aria-hidden="true" />
-          </button>
-          <ActionBtn title="Call" onClick={() => toast('Calls coming soon')}>
-            <Phone size={15} strokeWidth={2.5} />
-          </ActionBtn>
-          <ActionBtn title="Video" onClick={() => toast('Video coming soon')}>
-            <Video size={15} strokeWidth={2.5} />
-          </ActionBtn>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="chat-msgs">
-        {messages.length === 0 && (
-          <div className="chat-first-msg">Be the first to write</div>
-        )}
-        {messages.map((m, index) => {
-          const day = dayLabel(m.created_at)
-          const prevDay = index > 0 ? dayLabel(messages[index - 1].created_at) : ''
-          const showSep = day !== prevDay
-          const isMe = m.sender_id === userId
-          return (
-            <div key={m.id} className="chat-msg-row">
-              {showSep && <div className="chat-day-sep">{day}</div>}
-              <ChatMessageBubble message={m} isMine={isMe} time={msgTime(m.created_at)} />
-            </div>
-          )
-        })}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <ChatComposer
-        conversationId={conversationId}
-        userId={userId}
-        onAttach={() => toast('Attachments coming soon')}
-      />
-      {voiceSettingsOpen && (
-        <VoiceNoteConversationSettings
-          conversationId={conversationId}
-          userId={userId}
-          otherName={otherName}
-          onClose={() => setVoiceSettingsOpen(false)}
-          anchorRef={voiceSettingsButtonRef}
-        />
-      )}
-    </main>
-  )
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function InboxPage() {
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState('')
-  const toast = useToast()
+  const [filter, setFilter] = useState<InboxFilter>('all')
+  const [newChatOpen, setNewChatOpen] = useState(false)
+  const newBtnRef = useRef<HTMLButtonElement>(null)
 
   useLayoutEffect(() => {
     if (window.innerWidth > 760) return
@@ -193,109 +30,135 @@ export default function InboxPage() {
   }, [])
 
   const { data: convs = [], isLoading } = useConversations(user?.id)
-  const otherIds    = convs.map(c => c.other.id)
-  const presenceMap = usePresenceMap(otherIds)
+  const directOtherIds = useMemo(
+    () => convs.flatMap(c => (c.type === 'direct' ? [c.other.id] : [])),
+    [convs],
+  )
+  const presenceMap = usePresenceMap(directOtherIds)
 
-  const activeId   = params.get('c')
+  const activeId = params.get('c')
   const activeConv = convs.find(c => c.id === activeId) ?? null
 
-  const filtered = convs.filter(c =>
-    !search || c.other.display_name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return convs.filter(c => {
+      if (filter !== 'all' && c.type !== filter) return false
+      if (!q) return true
+      if (c.type === 'group') return c.name.toLowerCase().includes(q)
+      return (
+        c.other.display_name.toLowerCase().includes(q)
+        || c.other.username.toLowerCase().includes(q)
+      )
+    })
+  }, [convs, filter, search])
 
   return (
     <AppShell left={<LeftSidebar />} right={<RightSidebar />}>
       <div className={`chat-grid${activeId ? ' show-thread' : ''}`} style={{ height: undefined }}>
-
-        {/* ── Lista de conversaciones ── */}
         <aside className="chat-list">
-          {/* Header amarillo */}
           <div className="chat-list-head">
             <h2>NBOX</h2>
             <button
+              ref={newBtnRef}
               type="button"
-              onClick={() => toast('New chat coming soon')}
+              onClick={() => setNewChatOpen(true)}
               className="chat-new-btn"
+              aria-haspopup="dialog"
+              aria-expanded={newChatOpen}
             >
-              + New
+              <Plus size={14} strokeWidth={3} aria-hidden="true" />
+              <span>New</span>
             </button>
           </div>
 
-          {/* Search */}
           <div className="chat-list-search">
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search chats or groups…"
+              aria-label="Search conversations"
+            />
           </div>
 
-          {/* Conversations */}
+          <div className="chat-list-filters" role="group" aria-label="Conversation type filters">
+            {([
+              ['all', 'All'],
+              ['direct', 'Direct'],
+              ['group', 'Groups'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={filter === key}
+                className={`chat-filter-chip${filter === key ? ' active' : ''}`}
+                onClick={() => setFilter(key)}
+              >
+                {key === 'group' && <Users size={11} strokeWidth={2.8} aria-hidden="true" />}
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="chat-list-body">
             {isLoading && (
               <div className="chat-list-loading">Loading…</div>
             )}
             {!isLoading && filtered.length === 0 && (
               <div className="chat-list-empty">
-                No conversations.<br />Go to Contacts to start a chat.
+                {search || filter !== 'all' ? (
+                  'No matching conversations.'
+                ) : (
+                  <>
+                    No conversations.<br />Start a chat or create a group with + New.
+                  </>
+                )}
               </div>
             )}
-            {filtered.map(c => {
-              const p = presenceMap[c.other.id]
-              return (
-                <div
-                  key={c.id}
-                  className={`chat-item${c.id === activeId ? ' active' : ''}`}
-                >
-                  <Link
-                    to={`/profile/${c.other.username}`}
-                    title={`View profile for ${c.other.display_name}`}
-                    style={{ position: 'relative', flexShrink: 0, display: 'block', textDecoration: 'none' }}
-                  >
-                    <SqAvatar name={c.other.display_name} size={52} />
-                    {p && (
-                      <div className="presence-dot" style={{ background: p.dotColor }} />
-                    )}
-                  </Link>
-                  <button type="button" className="ci-body chat-item-open" onClick={() => setParams({ c: c.id })}>
-                    <div className="ci-name">
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                        {c.other.display_name}
-                      </span>
-                      {c.last_message_at && (
-                        <span className="ci-time">{timeAgo(c.last_message_at)}</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div className="ci-last">
-                        {c.last_message_text ?? `@${c.other.username}`}
-                      </div>
-                      {c.has_unread && <div className="ci-unread">!</div>}
-                    </div>
-                  </button>
-                </div>
-              )
-            })}
+            {filtered.map(c => (
+              <ConversationListItem
+                key={c.id}
+                conversation={c}
+                isActive={c.id === activeId}
+                presence={c.type === 'direct' ? presenceMap[c.other.id] : undefined}
+                onSelect={id => setParams({ c: id })}
+              />
+            ))}
           </div>
         </aside>
 
-        {/* ── Thread / Empty state ── */}
         {activeConv ? (
-          <ThreadPanel
+          <ConversationThread
             key={activeConv.id}
-            conversationId={activeConv.id}
+            conversation={activeConv}
             userId={user?.id ?? ''}
-            otherId={activeConv.other.id}
-            otherName={activeConv.other.display_name}
-            otherUsername={activeConv.other.username}
+            variant="inbox"
             onBack={() => setParams({})}
+            onRevoked={() => setParams({})}
           />
         ) : (
           <main className="chat-thread chat-empty-state" style={{ background: 'var(--bg)' }}>
             <div className="chat-empty-icon">
-              <Mail size={34} strokeWidth={2.5} />
+              <Mail size={34} strokeWidth={2.5} aria-hidden="true" />
             </div>
             <div className="chat-empty-title">NBOX</div>
-            <div className="chat-empty-sub">Select a conversation to get started</div>
+            <div className="chat-empty-sub">Select a conversation or create a private group</div>
           </main>
         )}
       </div>
+
+      {newChatOpen && user?.id && (
+        <Suspense fallback={null}>
+          <CreateGroupDialog
+            userId={user.id}
+            anchorRef={newBtnRef}
+            onClose={() => setNewChatOpen(false)}
+            onOpenedConversation={conversationId => {
+              setNewChatOpen(false)
+              setParams({ c: conversationId })
+            }}
+          />
+        </Suspense>
+      )}
     </AppShell>
   )
 }

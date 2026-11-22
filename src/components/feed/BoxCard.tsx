@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, Bookmark, Trash2, MoreHorizontal } from 'lucide-react'
+import { Bell, Bookmark, Trash2, MoreHorizontal, Pin, PinOff } from 'lucide-react'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useToast } from '../ui/Toast'
 import { useConfirm } from '../ui/ConfirmContext'
@@ -37,10 +37,12 @@ function timeAgo(iso: string | null): string {
 interface BoxCardProps {
   box: BoxWithAuthor
   engagement?: BoxEngagement
+  isPinned?: boolean
+  onTogglePin?: (boxId: string | null) => void
   onDelete?: (id: string) => void
 }
 
-export default function BoxCard({ box, engagement, onDelete }: BoxCardProps) {
+export default function BoxCard({ box, engagement, isPinned = false, onTogglePin, onDelete }: BoxCardProps) {
   const { user } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
@@ -184,6 +186,24 @@ export default function BoxCard({ box, engagement, onDelete }: BoxCardProps) {
                     <small>Get updates from this post.</small>
                   </span>
                 </button>
+                {isOwner && onTogglePin && (
+                  <button
+                    type="button"
+                    className="box-options-item"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onTogglePin(isPinned ? null : box.id)
+                    }}
+                  >
+                    {isPinned
+                      ? <PinOff size={17} strokeWidth={2.5} />
+                      : <Pin size={17} strokeWidth={2.5} />}
+                    <span>
+                      <strong>{isPinned ? 'Unpin from profile' : 'Pin to profile'}</strong>
+                      <small>{isPinned ? 'Remove this drop from the top of your profile.' : 'Highlight this drop at the top of your profile.'}</small>
+                    </span>
+                  </button>
+                )}
                 {isOwner && onDelete && (
                   <button
                     type="button"

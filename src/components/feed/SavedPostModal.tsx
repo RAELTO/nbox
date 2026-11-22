@@ -14,6 +14,7 @@ import CommentItem from './CommentItem'
 import ActivityModal, { type ActivityRow } from './ActivityModal'
 import ReactionsDetailModal from './ReactionsDetailModal'
 import type { BoxWithAuthor, LinkPayload, MediaPayload, MoodPayload, PollPayload, ThreadPayload, ReactionType, VoteType } from '../../types/database'
+import { sanitizeUrl } from '../../lib/sanitize'
 import { useDialogAccessibility } from '../ui/useDialogAccessibility'
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
@@ -71,15 +72,6 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(h / 24)}d`
 }
 
-function safeHref(url: string): string {
-  try {
-    const parsed = new URL(url)
-    return ['http:', 'https:'].includes(parsed.protocol) ? url : '#'
-  } catch {
-    return '#'
-  }
-}
-
 function CompactSavedBox({ box }: { box: BoxWithAuthor }) {
   const payload = box.payload as unknown
 
@@ -115,8 +107,8 @@ function CompactSavedBox({ box }: { box: BoxWithAuthor }) {
       )}
 
       {box.type === 'link' && (payload as LinkPayload)?.url && (
-        <a className="saved-modal-link" href={safeHref((payload as LinkPayload).url)} target="_blank" rel="noreferrer">
-          {(payload as LinkPayload).thumbnail && <img src={(payload as LinkPayload).thumbnail} alt="" width="160" height="120" loading="lazy" />}
+        <a className="saved-modal-link" href={sanitizeUrl((payload as LinkPayload).url) || '#'} target="_blank" rel="noopener noreferrer">
+          {(payload as LinkPayload).thumbnail && <img src={sanitizeUrl((payload as LinkPayload).thumbnail ?? '') || undefined} alt="" width="160" height="120" loading="lazy" />}
           <span>
             <strong>{(payload as LinkPayload).title ?? (payload as LinkPayload).url}</strong>
             {(payload as LinkPayload).host && <small>{(payload as LinkPayload).host}</small>}

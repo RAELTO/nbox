@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../features/auth/AuthContext'
-import { useConversations, type ConversationRow } from '../../features/chat/useConversations'
+import { useConversations, type ConversationSummary } from '../../features/chat/useConversations'
 import { useFloatingChat } from '../../features/chat/FloatingChatContext'
 import { useToast } from '../ui/Toast'
 
@@ -16,7 +16,7 @@ export default function MessageNotifier() {
   const { data: convs = [] } = useConversations(user?.id)
   const { chats, openChat } = useFloatingChat()
   const toast = useToast()
-  const prevRef = useRef<ConversationRow[]>([])
+  const prevRef = useRef<ConversationSummary[]>([])
   const initializedRef = useRef(false)
 
   useEffect(() => {
@@ -54,17 +54,38 @@ export default function MessageNotifier() {
         : conv.last_message_at !== prevConv.last_message_at && conv.has_unread
 
       if (isNewMessage && conv.last_message_sender_id !== user.id) {
-        toast(`New message from ${conv.other.display_name}`, 4000)
+        const displayTitle = conv.type === 'group' ? conv.name : conv.other.display_name
+        toast(
+          conv.type === 'group'
+            ? `New activity in ${displayTitle}`
+            : `New message from ${displayTitle}`,
+          4000,
+        )
         if (window.innerWidth > 820) {
           const alreadyOpen = chats.some(c => c.conversationId === conv.id)
           if (!alreadyOpen) {
-            openChat({
-              conversationId: conv.id,
-              otherId: conv.other.id,
-              otherName: conv.other.display_name,
-              otherUsername: conv.other.username,
-              otherAvatar: conv.other.avatar_url,
-            })
+            if (conv.type === 'group') {
+              openChat({
+                conversationId: conv.id,
+                type: 'group',
+                title: conv.name,
+                otherId: '',
+                otherName: conv.name,
+                otherUsername: '',
+                otherAvatar: null,
+              })
+            } else {
+              const { other } = conv
+              openChat({
+                conversationId: conv.id,
+                type: 'direct',
+                title: other.display_name,
+                otherId: other.id,
+                otherName: other.display_name,
+                otherUsername: other.username,
+                otherAvatar: other.avatar_url,
+              })
+            }
           }
         }
       }

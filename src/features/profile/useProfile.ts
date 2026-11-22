@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { sanitizeText } from '../../lib/sanitize'
+import { sanitizeText, sanitizeUrl } from '../../lib/sanitize'
+import type { Json } from '../../types/database'
+
+export interface ProfileLink {
+  label: string
+  url: string
+}
 
 export interface Profile {
   id: string
@@ -11,13 +17,48 @@ export interface Profile {
   role: 'user' | 'admin'
   is_banned: boolean
   voice_notes_enabled?: boolean
+  pinned_box_id: string | null
+  links: ProfileLink[]
+  created_at: string
 }
 
-export interface ProfileFormData {
+interface ProfileFormData {
   display_name: string
   username: string
   bio: string
   avatar_url: string
+  links?: ProfileLink[]
+}
+
+function parseProfileLinks(raw: unknown): ProfileLink[] {
+  if (!Array.isArray(raw)) return []
+  const cleaned: ProfileLink[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const candidate = item as { label?: unknown; url?: unknown }
+    const label = typeof candidate.label === 'string' ? sanitizeText(candidate.label).slice(0, 40) : ''
+    const url = typeof candidate.url === 'string' ? sanitizeUrl(candidate.url).slice(0, 300) : ''
+    if (!label || !url) continue
+    cleaned.push({ label, url })
+    if (cleaned.length >= 5) break
+  }
+  return cleaned
+}
+
+function normalizeProfile(row: Record<string, unknown>): Profile {
+  return {
+    id: String(row.id),
+    display_name: String(row.display_name ?? ''),
+    username: String(row.username ?? ''),
+    bio: typeof row.bio === 'string' ? row.bio : null,
+    avatar_url: typeof row.avatar_url === 'string' ? row.avatar_url : null,
+    role: row.role === 'admin' ? 'admin' : 'user',
+    is_banned: row.is_banned === true,
+    voice_notes_enabled: typeof row.voice_notes_enabled === 'boolean' ? row.voice_notes_enabled : undefined,
+    pinned_box_id: typeof row.pinned_box_id === 'string' ? row.pinned_box_id : null,
+    links: parseProfileLinks(row.links),
+    created_at: typeof row.created_at === 'string' ? row.created_at : new Date().toISOString(),
+  }
 }
 
 export function useProfile(userId?: string) {
@@ -26,11 +67,11 @@ export function useProfile(userId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled')
+        .select('id, display_name, username, bio, avatar_url, role, is_banned, voice_notes_enabled, pinned_box_id, links, created_at')
         .eq('id', userId!)
         .single()
       if (error) throw error
-      return data as Profile
+      return normalizeProfile(data as unknown as Record<string, unknown>)
     },
     enabled: !!userId,
   })
@@ -42,11 +83,11 @@ export function useProfileByUsername(username?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, username, bio, avatar_url, role, is_banned')
+        .select('id, display_name, username, bio, avatar_url, role, is_banned, pinned_box_id, links, created_at')
         .eq('username', username!.toLowerCase())
         .maybeSingle()
       if (error) throw error
-      return data as Profile | null
+      return data ? normalizeProfile(data as unknown as Record<string, unknown>) : null
     },
     enabled: !!username && username.length >= 3,
   })
@@ -70,6 +111,25 @@ export function usePublishedBoxCount(userId?: string) {
   })
 }
 
+export function usePinBox(userId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (boxId: string | null) => {
+      if (!userId) throw new Error('Authentication required')
+      const { error } = await supabase
+        .from('profiles')
+        .update({ pinned_box_id: boxId })
+        .eq('id', userId)
+      if (error) throw error
+      return boxId
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile', userId] })
+      qc.invalidateQueries({ queryKey: ['profile', 'by-username'] })
+    },
+  })
+}
+
 export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
@@ -81,6 +141,8 @@ export function useUpdateProfile() {
         throw new Error('Usernames can only use lowercase letters, numbers, and underscores (3-30 characters).')
       }
 
+      const cleanLinks = parseProfileLinks(form.links ?? [])
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -88,6 +150,7 @@ export function useUpdateProfile() {
           username: cleanUsername,
           bio: sanitizeText(form.bio).slice(0, 500) || null,
           avatar_url: sanitizeText(form.avatar_url).slice(0, 500) || null,
+          links: cleanLinks as unknown as Json,
         })
         .eq('id', userId)
 
@@ -98,6 +161,7 @@ export function useUpdateProfile() {
     },
     onSuccess: (_data, { userId }) => {
       qc.invalidateQueries({ queryKey: ['profile', userId] })
+      qc.invalidateQueries({ queryKey: ['profile', 'by-username'] })
     },
   })
 }

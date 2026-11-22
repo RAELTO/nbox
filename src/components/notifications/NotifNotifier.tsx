@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../features/auth/AuthContext'
 
 /**
- * Propietario único del canal Realtime de notificaciones.
+ * Single owner of the Realtime notifications channel.
  * Mounted once in App.tsx to avoid duplicate channel conflicts.
  */
 export default function NotifNotifier() {
@@ -16,7 +16,7 @@ export default function NotifNotifier() {
     const channel = supabase
       .channel(`notif-notifier:${user.id}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'notifications',
         filter: `recipient_id=eq.${user.id}`,
