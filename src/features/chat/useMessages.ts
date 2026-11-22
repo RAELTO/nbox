@@ -42,6 +42,34 @@ export const MESSAGE_SELECT = `
   attachments:message_attachments(id, message_id, kind, storage_path, mime_type, size_bytes, duration_ms, position, created_at)
 `
 
+let messagesGroupSequenceSupported = true
+
+function isMissingGroupSequenceError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  return error.code === '42703' || (error.message ?? '').includes('group_sequence')
+}
+
+async function fetchConversationMessages(
+  conversationId: string,
+  limit: number,
+  withGroupSequence: boolean,
+) {
+  let query = supabase
+    .from('messages')
+    .select(MESSAGE_SELECT)
+    .eq('conversation_id', conversationId)
+    .is('deleted_at', null)
+
+  if (withGroupSequence) {
+    query = query.order('group_sequence', { ascending: false, nullsFirst: false })
+  }
+
+  return query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit)
+}
+
 export function useMessages(
   conversationId: string | undefined,
   userId: string | undefined,
@@ -84,16 +112,21 @@ export function useMessages(
     queryKey: ['messages', conversationId, limit],
     queryFn: async () => {
       if (!conversationId) return []
-      const { data, error } = await supabase
-        .from('messages')
-        .select(MESSAGE_SELECT)
-        .eq('conversation_id', conversationId)
-        .is('deleted_at', null)
-        .order('group_sequence', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(limit)
-      if (error) throw error
+      const { data, error } = await fetchConversationMessages(
+        conversationId,
+        limit,
+        messagesGroupSequenceSupported,
+      )
+      if (error) {
+        if (messagesGroupSequenceSupported && isMissingGroupSequenceError(error)) {
+          messagesGroupSequenceSupported = false
+          const fallback = await fetchConversationMessages(conversationId, limit, false)
+          if (fallback.error) throw fallback.error
+          const rows = (fallback.data ?? []) as unknown as MessageRow[]
+          return rows.slice().reverse()
+        }
+        throw error
+      }
       const rows = (data ?? []) as unknown as MessageRow[]
       return rows.slice().reverse()
     },

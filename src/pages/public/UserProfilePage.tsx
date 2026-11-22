@@ -60,8 +60,8 @@ export default function UserProfilePage() {
     try {
       await pinBox.mutateAsync(boxId)
       toast(boxId ? 'Box pinned to your profile.' : 'Box unpinned from your profile.')
-    } catch {
-      toast('Could not update pinned box.')
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : 'Could not update pinned box.')
     }
   }
 

@@ -158,17 +158,21 @@ async function fetchDirectFallback(userId: string): Promise<ConversationSummary[
   })
 }
 
+let inboxRpcAvailable = true
+
 export function useConversations(userId: string | undefined) {
   return useQuery({
     queryKey: ['conversations', userId],
     queryFn: async () => {
       if (!userId) return []
+      if (!inboxRpcAvailable) return fetchDirectFallback(userId)
 
       const { data, error } = await supabase.rpc('get_inbox_conversations', { p_limit: 50 })
 
       if (error) {
         const msg = `${error.code ?? ''} ${error.message ?? ''}`
         if (error.code === '42883' || error.code === 'PGRST202' || msg.includes('get_inbox_conversations')) {
+          inboxRpcAvailable = false
           return fetchDirectFallback(userId)
         }
         throw error

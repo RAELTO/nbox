@@ -126,6 +126,17 @@ export function mapGroupChatError(
   error: unknown,
   fallback = 'Could not complete the group action. Please try again.',
 ): string {
+  if (error && typeof error === 'object') {
+    const candidate = error as { code?: unknown; message?: unknown }
+    const msg = typeof candidate.message === 'string' ? candidate.message : ''
+    if (
+      candidate.code === 'PGRST202'
+      || candidate.code === '42883'
+      || msg.includes('Could not find the function')
+    ) {
+      return 'Private groups require applying the latest Supabase migration first.'
+    }
+  }
   const code = extractGroupChatErrorCode(error)
   return code ? GROUP_ERROR_MESSAGES[code] : fallback
 }

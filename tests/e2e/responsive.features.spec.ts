@@ -602,3 +602,142 @@ for (const vp of VIEWPORTS) {
     })
   })
 }
+
+test('gracefully falls back when Supabase migrations are not yet applied', async ({ page }) => {
+  await installMockSessionAndApi(page)
+  const now = new Date().toISOString()
+  let inboxRpcCalls = 0
+  let extendedProfileCalls = 0
+  let groupSeqMessageCalls = 0
+
+  await page.route('**/rest/v1/rpc/get_inbox_conversations*', async route => {
+    inboxRpcCalls += 1
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 'PGRST202',
+        details: 'Searched for the function public.get_inbox_conversations with parameter p_limit',
+        hint: 'Perhaps you meant to call the function public.get_voice_note_permission',
+        message: 'Could not find the function public.get_inbox_conversations(p_limit) in the schema cache',
+      }),
+    })
+  })
+
+  await page.route('**/rest/v1/profiles*', async route => {
+    const req = route.request()
+    const url = new URL(req.url())
+    const selectParam = url.searchParams.get('select') ?? ''
+    if (selectParam.includes('pinned_box_id') || selectParam.includes('links')) {
+      extendedProfileCalls += 1
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: '42703',
+          details: null,
+          hint: null,
+          message: 'column profiles.pinned_box_id does not exist',
+        }),
+      })
+      return
+    }
+    const isSingle = (req.headers()['accept'] ?? '').includes('application/vnd.pgrst.object+json')
+    const legacyProfile = {
+      id: USER_ID,
+      display_name: 'Demo Brutal',
+      username: 'demo_brutal',
+      bio: 'Building modular brutalist boxes.',
+      avatar_url: null,
+      role: 'user',
+      is_banned: false,
+      voice_notes_enabled: true,
+      created_at: '2026-01-15T12:00:00.000Z',
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(isSingle ? legacyProfile : [legacyProfile]),
+    })
+  })
+
+  await page.route('**/rest/v1/conversations*', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: DIRECT_ID,
+          type: 'direct',
+          user_a: USER_ID,
+          user_b: CONTACT_A_ID,
+          last_message_at: now,
+          last_message_text: 'Legacy direct text',
+          created_at: now,
+          profile_a: { id: USER_ID, username: 'demo_brutal', display_name: 'Demo Brutal', avatar_url: null },
+          profile_b: { id: CONTACT_A_ID, username: 'alex_skate', display_name: 'Alex Skate', avatar_url: null },
+        },
+      ]),
+    })
+  })
+
+  await page.route('**/rest/v1/conversation_participants*', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { conversation_id: DIRECT_ID, last_read_at: now, voice_notes_mode: 'inherit' },
+      ]),
+    })
+  })
+
+  await page.route('**/rest/v1/messages*', async route => {
+    const url = new URL(route.request().url())
+    const orderParam = url.searchParams.get('order') ?? ''
+    if (orderParam.includes('group_sequence')) {
+      groupSeqMessageCalls += 1
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: '42703',
+          details: null,
+          hint: null,
+          message: 'column messages.group_sequence does not exist',
+        }),
+      })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb9',
+          conversation_id: DIRECT_ID,
+          sender_id: CONTACT_A_ID,
+          body: 'Legacy direct text',
+          kind: 'text',
+          created_at: now,
+          edited_at: null,
+          deleted_at: null,
+          sender: { id: CONTACT_A_ID, username: 'alex_skate', display_name: 'Alex Skate', avatar_url: null },
+          attachments: [],
+        },
+      ]),
+    })
+  })
+
+  await page.goto('/my-box', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByLabel('Display name')).toHaveValue('Demo Brutal')
+  await expect(page.locator('#main-content').getByText('@demo_brutal')).toBeVisible()
+  expect(extendedProfileCalls).toBeLessThanOrEqual(2)
+
+  await page.locator('.side-nav').getByRole('link', { name: 'NBOX' }).click()
+  const chatRow = page.locator('.chat-list').getByText('Alex Skate').first()
+  await expect(chatRow).toBeVisible()
+  await chatRow.click()
+  await expect(page.locator('.chat-thread').getByText('Legacy direct text').first()).toBeVisible()
+  expect(inboxRpcCalls).toBe(1)
+  expect(groupSeqMessageCalls).toBe(1)
+})
