@@ -58,7 +58,9 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'profiles_pinned_box_id_fkey'; columns: ['pinned_box_id']; referencedRelation: 'boxes'; referencedColumns: ['id'] }
+        ]
       }
       tags: {
         Row: {
@@ -318,6 +320,7 @@ export type Database = {
           created_at: string
           updated_at: string
           closed_at: string | null
+          create_request_id: string | null
         }
         Insert: {
           id?: string
@@ -337,6 +340,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           closed_at?: string | null
+          create_request_id?: string | null
         }
         Update: {
           name?: string | null
@@ -350,11 +354,13 @@ export type Database = {
           last_message_text?: string | null
           updated_at?: string
           closed_at?: string | null
+          create_request_id?: string | null
         }
         Relationships: [
           { foreignKeyName: 'conversations_user_a_fkey'; columns: ['user_a']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
           { foreignKeyName: 'conversations_user_b_fkey'; columns: ['user_b']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
-          { foreignKeyName: 'conversations_created_by_fkey'; columns: ['created_by']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
+          { foreignKeyName: 'conversations_created_by_fkey'; columns: ['created_by']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+          { foreignKeyName: 'conversations_last_message_sender_id_fkey'; columns: ['last_message_sender_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
         ]
       }
       conversation_participants: {
