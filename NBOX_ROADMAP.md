@@ -109,9 +109,9 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 
 ### Perfil de usuario
 - [x] Ver boxes propias en perfil público
-- [ ] Tabs en perfil: Boxes | Media | Saves | About
-- [ ] Pinned box en perfil
-- [ ] Sección "About" con links y fecha de unión
+- [x] Tabs en perfil: Boxes | Media | Saves | About
+- [x] Pinned box en perfil
+- [x] Sección "About" con links y fecha de unión
 
 ### Inbox
 - [x] Selector de emojis nativos con licencia MIT, inserción en el cursor y carga diferida
@@ -124,16 +124,17 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [x] Plan de implementación con controles administrativos y personales para notas de voz
 - [x] Lista de 55 tareas organizada por historias, dependencias y validación independiente
 - [x] Análisis cruzado de requisitos, plan y tareas sin conflictos constitucionales críticos
-- [ ] Implementar la base compartida de conversaciones directas y grupales
-- [ ] Entregar el MVP: crear grupo privado, buscarlo y enviar texto en cinco viewports
-- [ ] Implementar política administrativa de publicación de voz y eventos de sistema auténticos
-- [ ] Implementar preferencia personal de recepción sin descargar audio bloqueado
-- [ ] Completar administración, revocación, reingreso, continuidad de admin y cierre seguro
-- [ ] Ejecutar matriz RLS/concurrencia, regresión directa, Playwright, Axe, Android real y bundle review
+- [x] Implementar la base compartida de conversaciones directas y grupales
+- [x] Entregar el MVP: crear grupo privado, buscarlo y enviar texto en cinco viewports
+- [x] Implementar política administrativa de publicación de voz y eventos de sistema auténticos
+- [x] Implementar preferencia personal de recepción sin descargar audio bloqueado
+- [x] Completar administración, revocación, reingreso, continuidad de admin y cierre seguro
+- [ ] Ejecutar matriz RLS/concurrencia, regresión directa, Playwright, Axe, Android real y bundle review *(SQL local PGlite, Playwright 5 viewports/Axe, `public-chromium` y `react-doctor` pasaron; pendientes push remoto de migraciones por OAuth MCP vencido, Advisors en vivo, tests `authenticated.*` con credenciales `E2E_*` y prueba física en Chrome Android)*
 
 **Trazabilidad:** [`specs/001-group-chat-controls/`](specs/001-group-chat-controls/) es la fuente de
-verdad de esta capacidad. La migración reservada para implementación es
-`20260912190000_group_chat_controls.sql`. El piloto documental no modifica Supabase ni habilita UI.
+verdad de esta capacidad. Las migraciones implementadas y validadas en PostgreSQL local son
+`20260912190000_group_chat_controls.sql` y `20260912191000_profile_enhancements_and_security_hardening.sql`
+(pendientes de aplicación al proyecto Supabase remoto tras renovar la sesión OAuth de MCP / `supabase db push`).
 
 ### Notas de voz en chat — fase directa completada
 - [x] Definir arquitectura: audio en Storage privado, metadatos en Postgres y borrador local
@@ -155,16 +156,16 @@ verdad de esta capacidad. La migración reservada para implementación es
 - [x] Revalidar atómicamente al publicar y limpiar el archivo si la preferencia cambió durante el envío
 - [x] Mantener en chat directo la precedencia: excepción personal → preferencia global → permitir
 - [x] Probar bloqueo, continuidad del texto, preferencias, carreras y UI accesible en cinco viewports con Playwright
-- [ ] En grupos, permitir únicamente a administradores deshabilitar el envío para todo el grupo
-- [ ] En grupos, permitir bloqueo personal: mostrar placeholder y no descargar el audio para ese miembro
-- [ ] Registrar cambios administrativos como eventos de sistema protegidos contra suplantación
-- [ ] Extender a grupos la precedencia: bloqueo administrativo → excepción personal → preferencia global → permitir
+- [x] En grupos, permitir únicamente a administradores deshabilitar el envío para todo el grupo
+- [x] En grupos, permitir bloqueo personal: mostrar placeholder y no descargar el audio para ese miembro
+- [x] Registrar cambios administrativos como eventos de sistema protegidos contra suplantación
+- [x] Extender a grupos la precedencia: bloqueo administrativo → excepción personal → preferencia global → permitir
 
 **Contrato vigente para chats directos:** la preferencia de la persona receptora decide si admite audio. La excepción del chat puede heredar, permitir o bloquear y prevalece sobre el valor global. El remitente consulta antes de abrir el micrófono y vuelve a consultar antes de subir; la RPC revalida bajo bloqueo transaccional para cerrar carreras. Si la preferencia cambia después de subir, la publicación se rechaza, el objeto se elimina y el borrador local se conserva. Los mensajes de texto permanecen disponibles en todos los casos.
 
 ### Notificaciones
 - [x] Persistencia de lectura individual y masiva en `read_at`
-- [ ] Sustituir el auto-read al abrir por acciones explícitas "Mark read" y "Mark all read"
+- [x] Sustituir el auto-read al abrir por acciones explícitas "Mark read" y "Mark all read"
 - [ ] Menciones `@usuario` en boxes y comentarios
 
 ### Saved

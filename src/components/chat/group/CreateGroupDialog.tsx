@@ -5,6 +5,7 @@ import { useContacts } from '../../../features/contacts/useContacts'
 import { useCreateGroupConversation } from '../../../features/chat/useGroupChatMutations'
 import { useGetOrCreateConversation } from '../../../features/chat/useGetOrCreateConversation'
 import { mapGroupChatError } from '../../../features/chat/conversationTypes'
+import { groupNameSchema } from '../../../lib/validation'
 import Avatar from '../../ui/Avatar'
 import { useDialogAccessibility } from '../../ui/useDialogAccessibility'
 
@@ -102,7 +103,7 @@ export default function CreateGroupDialog({
   }, [contacts, state.contactSearch])
 
   const trimmedName = state.groupName.trim()
-  const isNameValid = trimmedName.length >= 1 && trimmedName.length <= 80
+  const isNameValid = groupNameSchema.safeParse(state.groupName).success
   const isMembersValid = state.selectedIds.length >= 2 && state.selectedIds.length <= 49
   const canSubmitGroup = isNameValid && isMembersValid && !createGroup.isPending
 

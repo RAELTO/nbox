@@ -93,6 +93,11 @@ export default defineConfig({
       use: { ...chromium, viewport: { width: 1440, height: 900 } },
     },
     {
+      name: 'responsive-features',
+      testMatch: /responsive\.features\.spec\.ts/,
+      use: { ...chromium, viewport: { width: 1440, height: 900 } },
+    },
+    {
       name: 'public-firefox',
       testMatch: /public\.(smoke|a11y)\.spec\.ts/,
       use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } },

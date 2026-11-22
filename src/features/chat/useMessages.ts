@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { groupTextMessageSchema } from '../../lib/validation'
 import type { Profile } from '../../types/database'
 import type { ConversationKind, SystemEventType } from './conversationTypes'
 
@@ -113,9 +114,11 @@ export function useSendMessage(
       if (!trimmed) throw new Error('invalid_group_message')
 
       if (conversationType === 'group') {
+        const parsed = groupTextMessageSchema.safeParse(body)
+        if (!parsed.success) throw new Error('invalid_group_message')
         const { data, error } = await supabase.rpc('publish_group_text_message', {
           p_conversation_id: conversationId,
-          p_body: trimmed,
+          p_body: parsed.data,
           p_client_request_id: crypto.randomUUID(),
         })
         if (error) throw error

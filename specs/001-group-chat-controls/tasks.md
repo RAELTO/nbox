@@ -9,9 +9,9 @@ fail before implementation and pass at each checkpoint.
 
 **Purpose**: Establish traceable implementation and test surfaces without changing production data.
 
-- [ ] T001 Record `20260912190000_group_chat_controls.sql` and the implementation milestone in NBOX_ROADMAP.md
-- [ ] T002 [P] Add reusable authenticated group fixtures without credentials in tests/e2e/support/groups.ts
-- [ ] T003 [P] Add a transaction-isolated authorization test harness in supabase/tests/group_chat_controls.sql
+- [x] T001 Record `20260912190000_group_chat_controls.sql` and the implementation milestone in NBOX_ROADMAP.md
+- [x] T002 [P] Add reusable authenticated group fixtures without credentials in tests/e2e/support/groups.ts
+- [x] T003 [P] Add a transaction-isolated authorization test harness in supabase/tests/group_chat_controls.sql
 - [ ] T004 Capture pre-change Supabase security/performance advisor output in specs/001-group-chat-controls/evidence/pre-advisors.md
 
 ---
@@ -22,17 +22,17 @@ fail before implementation and pass at each checkpoint.
 
 **Critical**: No story work starts until this phase passes review.
 
-- [ ] T005 Add discriminated conversation, participant, sequence, idempotency, and system-event columns/constraints/indexes in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T006 Add private active-membership, join-boundary, admin, sequence, and safe-read helpers with explicit grants in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T007 Replace group-capable conversation/message/attachment/Storage policies with indexed RLS predicates while preserving direct access in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T008 Restrict direct client message writes so `voice` and `system` cannot bypass protected RPCs in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T009 Add schema-backfill and direct-chat compatibility assertions in supabase/tests/group_chat_controls.sql
-- [ ] T010 Regenerate nullable sender and group RPC/table definitions in src/types/database.ts
-- [ ] T011 [P] Define `ConversationSummary`, `TimelineItem`, roles, policy states, and stable error codes in src/features/chat/conversationTypes.ts
-- [ ] T012 Normalize and paginate direct/group inbox results without scanning all messages in src/features/chat/useConversations.ts
-- [ ] T013 Add newest-first cursor pagination and system-event-safe profile mapping in src/features/chat/useMessages.ts
-- [ ] T014 Extract one reusable direct/group thread from src/pages/dashboard/InboxPage.tsx into src/components/chat/ConversationThread.tsx
-- [ ] T015 Migrate floating-chat state from `other*` fields to `ConversationSummary` in src/features/chat/FloatingChatContext.tsx and src/components/chat/FloatingChatPanel.tsx
+- [x] T005 Add discriminated conversation, participant, sequence, idempotency, and system-event columns/constraints/indexes in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T006 Add private active-membership, join-boundary, admin, sequence, and safe-read helpers with explicit grants in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T007 Replace group-capable conversation/message/attachment/Storage policies with indexed RLS predicates while preserving direct access in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T008 Restrict direct client message writes so `voice` and `system` cannot bypass protected RPCs in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T009 Add schema-backfill and direct-chat compatibility assertions in supabase/tests/group_chat_controls.sql
+- [x] T010 Regenerate nullable sender and group RPC/table definitions in src/types/database.ts
+- [x] T011 [P] Define `ConversationSummary`, `TimelineItem`, roles, policy states, and stable error codes in src/features/chat/conversationTypes.ts
+- [x] T012 Normalize and paginate direct/group inbox results without scanning all messages in src/features/chat/useConversations.ts
+- [x] T013 Add newest-first cursor pagination and system-event-safe profile mapping in src/features/chat/useMessages.ts
+- [x] T014 Extract one reusable direct/group thread from src/pages/dashboard/InboxPage.tsx into src/components/chat/ConversationThread.tsx
+- [x] T015 Migrate floating-chat state from `other*` fields to `ConversationSummary` in src/features/chat/FloatingChatContext.tsx and src/components/chat/FloatingChatPanel.tsx
 
 **Checkpoint**: Existing direct text, emoji, unread and voice scenarios pass before group UI is enabled.
 
@@ -47,18 +47,18 @@ unrelated user sees no metadata, history or live update.
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add create/send/read/non-member and idempotent-retry SQL cases in supabase/tests/group_chat_controls.sql
+- [x] T016 [P] [US1] Add create/send/read/non-member and idempotent-retry SQL cases in supabase/tests/group_chat_controls.sql
 - [ ] T017 [P] [US1] Add five-viewport create/search/open/text scenarios and record the under-two-minute completion measurement in tests/e2e/authenticated.groups.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement atomic create-group and publish-group-text RPCs plus safe inbox/member reads in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T019 [P] [US1] Add typed group create/member queries and error mapping in src/features/chat/useGroupChatMutations.ts
-- [ ] T020 [P] [US1] Add searchable accepted-contact name/member form in src/components/chat/group/CreateGroupDialog.tsx
-- [ ] T021 [P] [US1] Add group list identity and avatar fallback in src/components/chat/ConversationListItem.tsx and src/components/chat/group/GroupAvatar.tsx
-- [ ] T022 [US1] Integrate lazy group creation and normalized selection into src/pages/dashboard/InboxPage.tsx
-- [ ] T023 [US1] Render group headers and text timelines through src/components/chat/ConversationThread.tsx
-- [ ] T024 [US1] Add responsive dialog/sheet, focus, touch, safe-area, and overflow styles in src/styles/globals.css
+- [x] T018 [US1] Implement atomic create-group and publish-group-text RPCs plus safe inbox/member reads in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T019 [P] [US1] Add typed group create/member queries and error mapping in src/features/chat/useGroupChatMutations.ts
+- [x] T020 [P] [US1] Add searchable accepted-contact name/member form in src/components/chat/group/CreateGroupDialog.tsx
+- [x] T021 [P] [US1] Add group list identity and avatar fallback in src/components/chat/ConversationListItem.tsx and src/components/chat/group/GroupAvatar.tsx
+- [x] T022 [US1] Integrate lazy group creation and normalized selection into src/pages/dashboard/InboxPage.tsx
+- [x] T023 [US1] Render group headers and text timelines through src/components/chat/ConversationThread.tsx
+- [x] T024 [US1] Add responsive dialog/sheet, focus, touch, safe-area, and overflow styles in src/styles/globals.css
 
 **Checkpoint**: The private text-only group MVP is independently usable and authorized.
 
@@ -73,17 +73,17 @@ keep text usable, and re-enable voice without replacing the conversation.
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Add admin/non-admin, conflicting-policy, and publish-race SQL cases in supabase/tests/group_chat_controls.sql
+- [x] T025 [P] [US2] Add admin/non-admin, conflicting-policy, and publish-race SQL cases in supabase/tests/group_chat_controls.sql
 - [ ] T026 [P] [US2] Add admin block, text continuity, unsupported-recorder fallback, stale recording, and event scenarios in tests/e2e/authenticated.groups.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement group publication policy RPC, policy versioning, and protected structured events in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T028 [US2] Extend atomic voice publication to group membership/policy locking in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T029 [US2] Split typed direct-recipient and group-admin send capabilities in src/features/chat/useVoiceNotePolicies.ts
-- [ ] T030 [P] [US2] Render immutable structured timeline notices in src/components/chat/SystemEventBubble.tsx
-- [ ] T031 [P] [US2] Add lazy admin publication controls in src/components/chat/group/GroupVoiceAdminSection.tsx
-- [ ] T032 [US2] Recheck group policy before recording/upload and preserve rejected drafts in src/components/chat/ChatComposer.tsx and src/features/chat/useSendVoiceMessage.ts
+- [x] T027 [US2] Implement group publication policy RPC, policy versioning, and protected structured events in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T028 [US2] Extend atomic voice publication to group membership/policy locking in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T029 [US2] Split typed direct-recipient and group-admin send capabilities in src/features/chat/useVoiceNotePolicies.ts
+- [x] T030 [P] [US2] Render immutable structured timeline notices in src/components/chat/SystemEventBubble.tsx
+- [x] T031 [P] [US2] Add lazy admin publication controls in src/components/chat/group/GroupVoiceAdminSection.tsx
+- [x] T032 [US2] Recheck group policy before recording/upload and preserve rejected drafts in src/components/chat/ChatComposer.tsx and src/features/chat/useSendVoiceMessage.ts
 
 **Checkpoint**: Group publication policy is server-authoritative, race-safe and visible on every viewport.
 
@@ -99,16 +99,16 @@ and play the same message as another member.
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Add preference precedence and blocked attachment/Storage SQL cases in supabase/tests/group_chat_controls.sql
+- [x] T033 [P] [US3] Add preference precedence and blocked attachment/Storage SQL cases in supabase/tests/group_chat_controls.sql
 - [ ] T034 [P] [US3] Add self-blocked sender, preserved pre-block voice, placeholder, zero-media-request, inherit, and independent-playback scenarios in tests/e2e/authenticated.groups.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement caller-private reception state and attachment/Storage authorization in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T036 [US3] Expose separate send and playback capabilities without leaking preferences in src/features/chat/useVoiceNotePolicies.ts
-- [ ] T037 [P] [US3] Add accessible non-player blocked state in src/components/chat/VoiceMessagePlaceholder.tsx
-- [ ] T038 [P] [US3] Add personal inherit/allow/block controls in src/components/chat/group/PersonalVoicePreferenceSection.tsx
-- [ ] T039 [US3] Prevent attachment fetch/player mount when blocked in src/components/chat/ChatMessageBubble.tsx and src/components/chat/VoiceMessageBubble.tsx
+- [x] T035 [US3] Implement caller-private reception state and attachment/Storage authorization in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T036 [US3] Expose separate send and playback capabilities without leaking preferences in src/features/chat/useVoiceNotePolicies.ts
+- [x] T037 [P] [US3] Add accessible non-player blocked state in src/components/chat/VoiceMessagePlaceholder.tsx
+- [x] T038 [P] [US3] Add personal inherit/allow/block controls in src/components/chat/group/PersonalVoicePreferenceSection.tsx
+- [x] T039 [US3] Prevent attachment fetch/player mount when blocked in src/components/chat/ChatMessageBubble.tsx and src/components/chat/VoiceMessageBubble.tsx
 
 **Checkpoint**: Personal reception is private and enforced by UI, database metadata, and Storage.
 
@@ -123,17 +123,17 @@ an admin-only group, and prove immediate prospective revocation.
 
 ### Tests for User Story 4
 
-- [ ] T040 [P] [US4] Add member-limit, rejoin boundary, last-admin, closure, revocation, and concurrency SQL cases in supabase/tests/group_chat_controls.sql
+- [x] T040 [P] [US4] Add member-limit, rejoin boundary, last-admin, closure, revocation, and concurrency SQL cases in supabase/tests/group_chat_controls.sql
 - [ ] T041 [P] [US4] Add member/role/name/leave/closure and live-revocation scenarios in tests/e2e/authenticated.groups.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T042 [US4] Implement add/remove/rejoin/leave/role/rename/close RPCs and atomic events in supabase/migrations/20260912190000_group_chat_controls.sql
-- [ ] T043 [US4] Add member/details queries and administration mutations in src/features/chat/useGroupChatMutations.ts
-- [ ] T044 [P] [US4] Build safe member list and role actions in src/components/chat/group/GroupMemberList.tsx
-- [ ] T045 [P] [US4] Build lazy rename/add/leave/close details surface in src/components/chat/group/GroupDetailsDialog.tsx
-- [ ] T046 [US4] Subscribe to own membership changes and evict/close revoked conversations in src/components/chat/ConversationThread.tsx
-- [ ] T047 [US4] Integrate group details in Inbox and compact floating presentation in src/pages/dashboard/InboxPage.tsx and src/components/chat/FloatingChatPanel.tsx
+- [x] T042 [US4] Implement add/remove/rejoin/leave/role/rename/close RPCs and atomic events in supabase/migrations/20260912190000_group_chat_controls.sql
+- [x] T043 [US4] Add member/details queries and administration mutations in src/features/chat/useGroupChatMutations.ts
+- [x] T044 [P] [US4] Build safe member list and role actions in src/components/chat/group/GroupMemberList.tsx
+- [x] T045 [P] [US4] Build lazy rename/add/leave/close details surface in src/components/chat/group/GroupDetailsDialog.tsx
+- [x] T046 [US4] Subscribe to own membership changes and evict/close revoked conversations in src/components/chat/ConversationThread.tsx
+- [x] T047 [US4] Integrate group details in Inbox and compact floating presentation in src/pages/dashboard/InboxPage.tsx and src/components/chat/FloatingChatPanel.tsx
 
 **Checkpoint**: Group ownership cannot be orphaned and revoked users receive no later data.
 
@@ -146,7 +146,7 @@ an admin-only group, and prove immediate prospective revocation.
 - [ ] T050 Run the 30-message-per-profile SC-002 protocol and record results in specs/001-group-chat-controls/evidence/performance.md
 - [ ] T051 Verify physical recording/playback and permission recovery on Chrome Android and record results in specs/001-group-chat-controls/evidence/android-voice.md
 - [ ] T052 Run direct-chat regression, full Playwright, lint and production build from specs/001-group-chat-controls/quickstart.md
-- [ ] T053 Run React Doctor and bundle analysis, lazy-load group/details/floating surfaces, and record deltas in specs/001-group-chat-controls/evidence/frontend-quality.md
+- [x] T053 Run React Doctor and bundle analysis, lazy-load group/details/floating surfaces, and record deltas in specs/001-group-chat-controls/evidence/frontend-quality.md
 - [ ] T054 Re-run Supabase advisors and document no new feature finding in specs/001-group-chat-controls/evidence/post-advisors.md
 - [ ] T055 Update delivered checkboxes, decisions and remaining risks in specs/001-group-chat-controls/spec.md and NBOX_ROADMAP.md
 

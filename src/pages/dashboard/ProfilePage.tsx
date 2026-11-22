@@ -8,7 +8,7 @@ import AdminBadge from '../../components/ui/AdminBadge'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useProfile, useUpdateProfile } from '../../features/profile/useProfile'
 import { uploadAvatarImage } from '../../lib/storage'
-import { sanitizeUrl } from '../../lib/sanitize'
+import { profileLinksArraySchema } from '../../lib/validation'
 import AppShell from '../../components/layout/AppShell'
 import LeftSidebar from '../../components/layout/LeftSidebar'
 import RightSidebar from '../../components/layout/RightSidebar'
@@ -17,15 +17,6 @@ import Avatar from '../../components/ui/Avatar'
 import { useToast } from '../../components/ui/Toast'
 import VoiceNoteGlobalSetting from '../../components/chat/VoiceNoteGlobalSetting'
 
-const linkSchema = z.object({
-  label: z.string().trim().min(1, 'Label required').max(40, 'Maximum 40 characters'),
-  url: z
-    .string()
-    .trim()
-    .max(300, 'Maximum 300 characters')
-    .refine(value => Boolean(sanitizeUrl(value)), 'Use a valid http:// or https:// URL'),
-})
-
 const schema = z.object({
   display_name: z.string().min(2, 'Minimum 2 characters').max(100, 'Maximum 100 characters'),
   username: z.string()
@@ -33,7 +24,7 @@ const schema = z.object({
     .max(30, 'Maximum 30 characters')
     .regex(/^[a-z0-9_]+$/, 'Lowercase letters, numbers, and underscores only'),
   bio: z.string().max(500, 'Maximum 500 characters').optional().or(z.literal('')),
-  links: z.array(linkSchema).max(5, 'Maximum 5 links'),
+  links: profileLinksArraySchema,
 })
 
 type FormValues = z.infer<typeof schema>

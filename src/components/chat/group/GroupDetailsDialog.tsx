@@ -20,6 +20,7 @@ import { useContacts } from '../../../features/contacts/useContacts'
 import { useConfirm } from '../../ui/ConfirmContext'
 import { useToast } from '../../ui/Toast'
 import { useDialogAccessibility } from '../../ui/useDialogAccessibility'
+import { groupNameSchema } from '../../../lib/validation'
 import GroupAvatar from './GroupAvatar'
 import GroupDangerSection from './GroupDangerSection'
 import GroupMembersSection from './GroupMembersSection'
@@ -79,8 +80,14 @@ export default function GroupDetailsDialog({
 
   async function handleRename(event: React.FormEvent) {
     event.preventDefault()
-    const trimmed = draftName.trim()
-    if (!trimmed || trimmed === group.name || renameGroup.isPending) return
+    if (renameGroup.isPending) return
+    const parsed = groupNameSchema.safeParse(draftName)
+    if (!parsed.success) {
+      setActionError('Group name must be between 1 and 80 characters without HTML brackets.')
+      return
+    }
+    const trimmed = parsed.data
+    if (trimmed === group.name) return
     setActionError(null)
     try {
       await renameGroup.mutateAsync(trimmed)
