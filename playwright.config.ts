@@ -35,7 +35,7 @@ const authenticatedResponsiveProjects: Project[] = [
   },
 ].map(project => ({
   ...project,
-  testMatch: /authenticated\.(navigation|visual|a11y|interactions|voice)\.spec\.ts/,
+  testMatch: /authenticated\.(navigation|visual|a11y|interactions|voice|groups)\.spec\.ts/,
   dependencies: ['auth-setup'],
   metadata: { authRole: 'demo' },
   use: {
@@ -89,7 +89,7 @@ export default defineConfig({
     },
     {
       name: 'public-chromium',
-      testMatch: /public\.(smoke|visual|a11y|performance)\.spec\.ts/,
+      testMatch: /public\.(smoke|visual|a11y|performance|security)\.spec\.ts/,
       use: { ...chromium, viewport: { width: 1440, height: 900 } },
     },
     {
