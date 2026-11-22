@@ -1,15 +1,35 @@
 # Supabase and security verification
 
-Project `korxgckhjvsrknunqiif` · 2026-11-21
+Project `korxgckhjvsrknunqiif` · 2026-11-22 UTC
 
-| Live check | Status |
+| Live check | Result |
 | --- | --- |
-| Apply both migrations through `apply_migration` | Pending restored MCP OAuth access and live baseline |
-| Run the rollback suite through `execute_sql` | Pending live migrations |
-| Run security and performance advisors | Pending live migrations |
-| Compare checked-in TypeScript types with the project catalog | Pending live database access |
+| Group chat controls | `apply_migration` returned `{"success":true}`. Live history records `20261122014751_group_chat_controls`. |
+| Profile enhancements and security hardening | `apply_migration` returned `{"success":true}`. Live history records `20261122014755_profile_enhancements_and_security_hardening`. |
+| PostgREST | `NOTIFY pgrst, 'reload schema';` succeeded. |
+| Rollback SQL suite | The checked-in `BEGIN … ROLLBACK` script executed successfully. MCP returned `[{"expect_error":""}]` from the final assertion, which confirms a banned caller received `user_banned`. A separate query returned `[{"remaining_rollback_fixtures":0}]`. |
+| TypeScript contract | Live verification covered the RPCs and columns listed below. Checked-in TypeScript types were outside this verification scope. |
 
-The baseline attempts in [pre-advisors.md](pre-advisors.md) failed during MCP OAuth refresh. The project database received no migration or fixture changes from this work.
+MCP assigned the live migration timestamps. Both migrations and the test suite ran as checked in.
+
+## Live schema
+
+- Verified `get_inbox_conversations`, `create_group_conversation`, `publish_group_text_message`, `publish_group_voice_message`, `set_group_voice_publication`, `set_group_voice_reception`, `get_group_members`, and `get_group_voice_state` in `public`. All eight are security invoker functions. `authenticated` has EXECUTE on all eight and `anon` has EXECUTE on zero.
+- Verified `profiles.pinned_box_id` (UUID), `profiles.links` (JSONB), and `messages.group_sequence` (bigint).
+- The live SQL assertions covered group membership and history boundaries, direct-chat compatibility, role and member limits, idempotency, voice policy and attachment visibility, Storage metadata RLS, notification integrity, profile pin ownership, and banned callers. Actual Storage HTTP transfers and concurrent behavior were outside the SQL suite.
+
+## Live advisor comparison
+
+| Advisor | Before | After | Findings |
+| --- | ---: | ---: | --- |
+| Security | 1 | 1 | Leaked Password Protection Disabled. The warning was already present. The post-change advisor returned zero new security findings. [Remediation](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) |
+| Unindexed foreign keys | 9 | 9 | Same nine foreign keys. [Remediation](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys) |
+| RLS init plan | 33 | 32 | The finding for `profiles_update_own` cleared. [Remediation](https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan) |
+| Unused indexes | 17 | 22 | Seven newly created indexes appeared in this snapshot. The entries for `idx_messages_sender` and `idx_convpart_user` cleared. [Remediation](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index) |
+| Multiple permissive policies | 24 | 19 | Five profile UPDATE entries cleared. [Remediation](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies) |
+| **Performance total** | **83** | **82** | |
+
+The seven newly reported unused indexes were `conversations_last_message_sender_idx`, `conversations_inbox_order_idx`, `participants_active_user_idx`, `participants_active_history_idx`, `participants_active_admin_idx`, `messages_visible_group_idx`, and `profiles_pinned_box_id_idx`.
 
 ## Local results
 

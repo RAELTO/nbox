@@ -12,7 +12,7 @@ fail before implementation and pass at each checkpoint.
 - [x] T001 Record `20260912190000_group_chat_controls.sql` and the implementation milestone in NBOX_ROADMAP.md
 - [x] T002 [P] Add reusable authenticated group fixtures without credentials in tests/e2e/support/groups.ts
 - [x] T003 [P] Add a transaction-isolated authorization test harness in supabase/tests/group_chat_controls.sql
-- [ ] T004 Capture pre-change Supabase security/performance advisor output in specs/001-group-chat-controls/evidence/pre-advisors.md
+- [x] T004 Capture pre-change Supabase security/performance advisor output in specs/001-group-chat-controls/evidence/pre-advisors.md
 
 ---
 
@@ -147,7 +147,7 @@ an admin-only group, and prove immediate prospective revocation.
 - [ ] T051 Verify physical recording/playback and permission recovery on Chrome Android and record results in specs/001-group-chat-controls/evidence/android-voice.md
 - [ ] T052 Run direct-chat regression, full Playwright, lint and production build from specs/001-group-chat-controls/quickstart.md
 - [x] T053 Run React Doctor and bundle analysis, lazy-load group/details/floating surfaces, and record deltas in specs/001-group-chat-controls/evidence/frontend-quality.md
-- [ ] T054 Re-run Supabase advisors and document no new feature finding in specs/001-group-chat-controls/evidence/post-advisors.md
+- [x] T054 Re-run Supabase advisors and document no new feature finding in specs/001-group-chat-controls/evidence/post-advisors.md
 - [ ] T055 Update delivered checkboxes, decisions and remaining risks in specs/001-group-chat-controls/spec.md and NBOX_ROADMAP.md
 
 ---

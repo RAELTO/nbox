@@ -129,12 +129,14 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [x] Implementar política administrativa de publicación de voz y eventos de sistema auténticos
 - [x] Implementar preferencia personal de recepción sin descargar audio bloqueado
 - [x] Completar administración, revocación, reingreso, continuidad de admin y cierre seguro
-- [ ] Ejecutar matriz RLS/concurrencia, regresión directa, Playwright, Axe, Android real y bundle review *(SQL local PGlite, Playwright 5 viewports/Axe, `public-chromium` y `react-doctor` pasaron; pendientes push remoto de migraciones por OAuth MCP vencido, Advisors en vivo, tests `authenticated.*` con credenciales `E2E_*` y prueba física en Chrome Android)*
+- [ ] Ejecutar matriz RLS/concurrencia, regresión directa, Playwright, Axe, Android real y bundle review *(Migraciones aplicadas en vivo sobre `korxgckhjvsrknunqiif`, suite SQL rollback aprobada en Supabase real, Security/Performance Advisors sin nuevos hallazgos, Playwright 5 viewports/Axe/`public-chromium` y `react-doctor` aprobados; pendientes tests `authenticated.*` con credenciales `E2E_*` y prueba física en Chrome Android)*
 
 **Trazabilidad:** [`specs/001-group-chat-controls/`](specs/001-group-chat-controls/) es la fuente de
-verdad de esta capacidad. Las migraciones implementadas y validadas en PostgreSQL local son
-`20260912190000_group_chat_controls.sql` y `20260912191000_profile_enhancements_and_security_hardening.sql`
-(pendientes de aplicación al proyecto Supabase remoto tras renovar la sesión OAuth de MCP / `supabase db push`).
+verdad de esta capacidad. Las migraciones `20260912190000_group_chat_controls.sql` (registrada en vivo como
+`20261122014751_group_chat_controls`) y `20260912191000_profile_enhancements_and_security_hardening.sql`
+(registrada en vivo como `20261122014755_profile_enhancements_and_security_hardening`) quedaron aplicadas y
+validadas en el proyecto remoto junto con [`evidence/pre-advisors.md`](specs/001-group-chat-controls/evidence/pre-advisors.md)
+y [`evidence/post-advisors.md`](specs/001-group-chat-controls/evidence/post-advisors.md).
 
 ### Notas de voz en chat — fase directa completada
 - [x] Definir arquitectura: audio en Storage privado, metadatos en Postgres y borrador local
