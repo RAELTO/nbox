@@ -199,15 +199,17 @@ export default function AppearanceModal({ onClose, anchorRef }: AppearanceModalP
 
           <div className="appearance-preview-strip" role="group" aria-label="Live theme preview">
             <strong>Preview</strong>
-            {accentSlots.map(({ key, label }, index) => (
-              <span
-                key={key}
-                className="appearance-preview-chip"
-                style={{ backgroundColor: `var(--accent-${index + 1})`, color: `var(--on-accent-${index + 1})` }}
-              >
-                {label}
-              </span>
-            ))}
+            <div className="appearance-preview-accents">
+              {accentSlots.map(({ key, label }, index) => (
+                <span
+                  key={key}
+                  className="appearance-preview-chip"
+                  style={{ backgroundColor: `var(--accent-${index + 1})`, color: `var(--on-accent-${index + 1})` }}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
 
           <section className="appearance-section" aria-label="Customize palette">

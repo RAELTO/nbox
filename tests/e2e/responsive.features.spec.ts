@@ -753,6 +753,13 @@ for (const vp of VIEWPORTS) {
       expect(darkTokens.shadow).toBe('#3a3e49')
       expect(darkTokens.onAccent2).toBe('#111111')
 
+      const preview = dialog.getByRole('group', { name: 'Live theme preview' })
+      const chips = preview.locator('.appearance-preview-chip')
+      await expect(chips).toHaveText(['Accent 1', 'Accent 2', 'Accent 3', 'Accent 4', 'Accent 5'])
+      const rows = await chips.evaluateAll(items => items.map(item => item.getBoundingClientRect().top))
+      expect(rows.filter(top => top === rows[0])).toHaveLength(vp.isMobile ? 3 : 5)
+      expect(new Set(rows).size).toBe(vp.isMobile ? 2 : 1)
+
       const hexInput = dialog.locator('.prism-hex-input')
       await hexInput.fill('#2563eb')
       await hexInput.press('Enter')
