@@ -91,7 +91,7 @@ export default function ConversationThread({
     }
 
     const channel = supabase
-      .channel(`group-access:${conversation.id}:${userId}`)
+      .channel(`group-access:${conversation.id}:${userId}:${crypto.randomUUID()}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',

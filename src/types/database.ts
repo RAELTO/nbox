@@ -87,6 +87,7 @@ export type Database = {
         Row: {
           id: string
           author_id: string
+          group_id: string | null
           type: 'quick' | 'media' | 'poll' | 'mood' | 'link' | 'thread'
           content: string
           payload: Json
@@ -98,6 +99,7 @@ export type Database = {
         Insert: {
           id?: string
           author_id: string
+          group_id?: string | null
           type?: 'quick' | 'media' | 'poll' | 'mood' | 'link' | 'thread'
           content?: string
           payload?: Json
@@ -109,6 +111,7 @@ export type Database = {
         Update: {
           id?: string
           author_id?: string
+          group_id?: string | null
           type?: 'quick' | 'media' | 'poll' | 'mood' | 'link' | 'thread'
           content?: string
           payload?: Json
@@ -123,7 +126,113 @@ export type Database = {
             columns: ['author_id']
             referencedRelation: 'profiles'
             referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'boxes_group_id_fkey'
+            columns: ['group_id']
+            referencedRelation: 'groups'
+            referencedColumns: ['id']
           }
+        ]
+      }
+      stories: {
+        Row: {
+          id: string
+          author_id: string
+          media_url: string | null
+          caption: string | null
+          bg_color: 'accent-1' | 'accent-2' | 'accent-3' | 'accent-4' | 'accent-5' | 'ink'
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          author_id: string
+          media_url?: string | null
+          caption?: string | null
+          bg_color?: 'accent-1' | 'accent-2' | 'accent-3' | 'accent-4' | 'accent-5' | 'ink'
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          caption?: string | null
+          bg_color?: 'accent-1' | 'accent-2' | 'accent-3' | 'accent-4' | 'accent-5' | 'ink'
+        }
+        Relationships: [
+          { foreignKeyName: 'stories_author_id_fkey'; columns: ['author_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
+        ]
+      }
+      story_views: {
+        Row: {
+          story_id: string
+          viewer_id: string
+          viewed_at: string
+        }
+        Insert: {
+          story_id: string
+          viewer_id: string
+          viewed_at?: string
+        }
+        Update: never
+        Relationships: [
+          { foreignKeyName: 'story_views_story_id_fkey'; columns: ['story_id']; referencedRelation: 'stories'; referencedColumns: ['id'] },
+          { foreignKeyName: 'story_views_viewer_id_fkey'; columns: ['viewer_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
+        ]
+      }
+      groups: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string
+          accent_color: 'accent-1' | 'accent-2' | 'accent-3' | 'accent-4' | 'accent-5'
+          visibility: 'public' | 'private'
+          join_policy: 'open' | 'approval'
+          post_policy: 'members' | 'admins_only'
+          created_by: string | null
+          pinned_box_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          { foreignKeyName: 'groups_created_by_fkey'; columns: ['created_by']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+          { foreignKeyName: 'groups_pinned_box_id_fkey'; columns: ['pinned_box_id']; referencedRelation: 'boxes'; referencedColumns: ['id'] }
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          user_id: string
+          role: 'member' | 'moderator' | 'admin'
+          status: 'active' | 'banned'
+          joined_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          { foreignKeyName: 'group_members_group_id_fkey'; columns: ['group_id']; referencedRelation: 'groups'; referencedColumns: ['id'] },
+          { foreignKeyName: 'group_members_user_id_fkey'; columns: ['user_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
+        ]
+      }
+      group_join_requests: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string
+          message: string | null
+          status: 'pending' | 'approved' | 'declined' | 'canceled'
+          reviewed_by: string | null
+          created_at: string
+          responded_at: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          { foreignKeyName: 'group_join_requests_group_id_fkey'; columns: ['group_id']; referencedRelation: 'groups'; referencedColumns: ['id'] },
+          { foreignKeyName: 'group_join_requests_user_id_fkey'; columns: ['user_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+          { foreignKeyName: 'group_join_requests_reviewed_by_fkey'; columns: ['reviewed_by']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
         ]
       }
       box_tags: {
@@ -748,6 +857,13 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_group_conversation: {
+        Args: {
+          p_conversation_id: string
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
       get_inbox_conversations: {
         Args: {
           p_limit?: number
@@ -765,6 +881,83 @@ export type Database = {
       get_group_voice_state: {
         Args: {
           p_conversation_id: string
+        }
+        Returns: Json
+      }
+      create_social_group: {
+        Args: {
+          p_name: string
+          p_description?: string
+          p_visibility?: 'public' | 'private'
+          p_join_policy?: 'open' | 'approval'
+          p_post_policy?: 'members' | 'admins_only'
+          p_accent_color?: 'accent-1' | 'accent-2' | 'accent-3' | 'accent-4' | 'accent-5'
+        }
+        Returns: Json
+      }
+      update_social_group_settings: {
+        Args: {
+          p_group_id: string
+          p_name: string
+          p_description?: string
+          p_visibility?: 'public' | 'private'
+          p_join_policy?: 'open' | 'approval'
+          p_post_policy?: 'members' | 'admins_only'
+          p_accent_color?: 'accent-1' | 'accent-2' | 'accent-3' | 'accent-4' | 'accent-5'
+        }
+        Returns: Json
+      }
+      join_or_request_social_group: {
+        Args: {
+          p_group_id: string
+          p_message?: string | null
+        }
+        Returns: Json
+      }
+      cancel_group_join_request: {
+        Args: {
+          p_group_id: string
+        }
+        Returns: Json
+      }
+      respond_group_join_request: {
+        Args: {
+          p_request_id: string
+          p_approve: boolean
+        }
+        Returns: Json
+      }
+      invite_contact_to_social_group: {
+        Args: {
+          p_group_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      moderate_social_group_member: {
+        Args: {
+          p_group_id: string
+          p_user_id: string
+          p_action: 'promote_admin' | 'promote_moderator' | 'demote_member' | 'remove' | 'ban' | 'unban'
+        }
+        Returns: Json
+      }
+      leave_social_group: {
+        Args: {
+          p_group_id: string
+        }
+        Returns: Json
+      }
+      pin_social_group_box: {
+        Args: {
+          p_group_id: string
+          p_box_id: string | null
+        }
+        Returns: Json
+      }
+      delete_social_group: {
+        Args: {
+          p_group_id: string
         }
         Returns: Json
       }

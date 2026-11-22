@@ -100,9 +100,9 @@ export default function LeftSidebar() {
         )}
 
         {user && (
-          <button type="button" title="Groups" className="side-link" onClick={() => toast('Groups coming soon')}>
+          <NavLink to="/groups" title="Groups" className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}>
             <UsersRound size={20} strokeWidth={2.5} /> Groups
-          </button>
+          </NavLink>
         )}
 
         {user && (

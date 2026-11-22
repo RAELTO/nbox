@@ -208,15 +208,16 @@ y [`evidence/post-advisors.md`](specs/001-group-chat-controls/evidence/post-advi
 - [ ] Pinned comment por el autor
 - [ ] Compartir drop directamente a un contacto (DM)
 
-### Social groups y feeds grupales (Fase futura, separado de Group chat)
-- [ ] Tabla `groups`, `group_members`, `group_boxes`
-- [ ] GroupPage: feed de boxes del grupo
-- [ ] Invitar contactos a un grupo
+### Group chat vs Social groups
+- [x] Diferenciación entre chat grupal (`/nbox`) y comunidades (`/groups`)
+- [x] Tabla `groups`, `group_members`, `group_join_requests`, `boxes.group_id` con visibilidad `public | private`, políticas `open | approval` y moderación (`admin | moderator | member | ban`)
+- [x] `GroupsPage` y `GroupDetailPage`: feed de boxes del grupo, solicitudes de ingreso y ajustes
+- [x] Invitar contactos aceptados a un grupo
 
-### Stories (Fase futura)
-- [ ] Backend: tabla `stories`, expiración 24h
-- [ ] StoriesRail funcional (actualmente decorativo)
-- [ ] Vista fullscreen con timer
+### Stories
+- [x] Backend: tabla `stories` y `story_views`, expiración 24h y RLS
+- [x] `StoriesRail` funcional con carga real desde Supabase y creación de stories de texto/foto
+- [x] Vista fullscreen (`StoryViewerModal`) con timer, pausa y lista de espectadores
 
 ### Memories (Fase futura)
 - [ ] "On this day" desde boxes antiguas del usuario

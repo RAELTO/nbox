@@ -4,9 +4,9 @@ import AppShell from '../../components/layout/AppShell'
 import Avatar from '../../components/ui/Avatar'
 import { useAuth } from '../../features/auth/AuthContext'
 import { useProfile } from '../../features/profile/useProfile'
-import { useToast } from '../../components/ui/Toast'
 
 const MENU_ITEMS = [
+  { to: '/groups',   label: 'Groups',        description: 'Communities, member approvals, and posts.', Icon: UsersRound },
   { to: '/saves',    label: 'Saved',        description: 'Posts you saved for later.',                Icon: Bookmark },
   { to: '/contacts', label: 'Find friends',  description: 'Requests, suggestions, and contacts.',     Icon: Search   },
 ] as const
@@ -14,7 +14,6 @@ const MENU_ITEMS = [
 export default function MenuPage() {
   const { user } = useAuth()
   const { data: profile } = useProfile(user?.id)
-  const toast = useToast()
   const navigate = useNavigate()
 
   return (
@@ -50,18 +49,6 @@ export default function MenuPage() {
             </button>
           ))}
 
-          <button
-            type="button"
-            className="mobile-menu-item panel"
-            onClick={() => toast('Groups coming soon.')}
-          >
-            <UsersRound size={24} strokeWidth={2.5} />
-            <span>
-              <strong>Groups</strong>
-              <small>Spaces and group posts will arrive later.</small>
-            </span>
-            <ChevronRight size={18} strokeWidth={2.5} />
-          </button>
         </div>
       </section>
     </AppShell>

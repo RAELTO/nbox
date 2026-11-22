@@ -11,6 +11,8 @@ const TagPage = lazy(() => import('../pages/public/TagPage'))
 const ProfilePage = lazy(() => import('../pages/dashboard/ProfilePage'))
 const UserProfilePage = lazy(() => import('../pages/public/UserProfilePage'))
 const ContactsPage = lazy(() => import('../pages/dashboard/ContactsPage'))
+const GroupsPage = lazy(() => import('../pages/dashboard/GroupsPage'))
+const GroupDetailPage = lazy(() => import('../pages/dashboard/GroupDetailPage'))
 const InboxPage = lazy(() => import('../pages/dashboard/InboxPage'))
 const SavedPage = lazy(() => import('../pages/dashboard/SavedPage'))
 const MenuPage = lazy(() => import('../pages/dashboard/MenuPage'))
@@ -48,6 +50,8 @@ export default function AppRouter() {
           <Route path="/explore" element={<Suspense fallback={<Fallback />}><HomePage /></Suspense>} />
           <Route path="/notifications" element={<Suspense fallback={<Fallback />}><NotificationsPage /></Suspense>} />
           <Route path="/contacts" element={<Suspense fallback={<Fallback />}><ContactsPage /></Suspense>} />
+          <Route path="/groups" element={<Suspense fallback={<Fallback />}><GroupsPage /></Suspense>} />
+          <Route path="/groups/:slug" element={<Suspense fallback={<Fallback />}><GroupDetailPage /></Suspense>} />
           <Route path="/nbox" element={<Suspense fallback={<Fallback />}><InboxPage /></Suspense>} />
           <Route path="/yo" element={<Suspense fallback={<Fallback />}><MenuPage /></Suspense>} />
           <Route path="/tag/:slug" element={<Suspense fallback={<Fallback />}><TagPage /></Suspense>} />

@@ -219,3 +219,23 @@ export function useCloseGroup(conversationId: string, userId?: string) {
     },
   })
 }
+
+export function useDeleteGroup(conversationId: string, userId?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('delete_group_conversation', {
+        p_conversation_id: conversationId,
+        p_client_request_id: crypto.randomUUID(),
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: ['messages', conversationId] })
+      qc.removeQueries({ queryKey: ['group-members', conversationId] })
+      qc.removeQueries({ queryKey: ['group-voice-state', conversationId] })
+      qc.invalidateQueries({ queryKey: ['conversations', userId] })
+    },
+  })
+}

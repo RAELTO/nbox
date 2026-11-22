@@ -4,7 +4,7 @@ import type { BoxWithAuthor, Box } from '../../types/database'
 
 export type FeedMode = 'foryou' | 'following' | 'fresh' | 'loud'
 
-const BOX_SELECT = `
+export const BOX_SELECT = `
   *,
   author:profiles!boxes_author_id_fkey(id, username, display_name, avatar_url, role),
   tags:box_tags(tag:tags(id, name, slug)),
@@ -12,7 +12,7 @@ const BOX_SELECT = `
   comment_count:box_comments(count)
 `
 
-function normalizeBoxes(data: unknown[] | null | undefined): BoxWithAuthor[] {
+export function normalizeBoxes(data: unknown[] | null | undefined): BoxWithAuthor[] {
   const rows = (data ?? []) as Record<string, unknown>[]
   return rows.map((b) => ({
     ...b,
@@ -48,6 +48,7 @@ async function fetchFeed(mode: FeedMode, userId?: string): Promise<BoxWithAuthor
     .from('boxes')
     .select(BOX_SELECT)
     .eq('status', 'published')
+    .is('group_id', null)
 
   if (mode === 'fresh') {
     query = query.order('published_at', { ascending: false })
@@ -93,6 +94,7 @@ async function fetchBoxesByAuthor(authorId: string): Promise<BoxWithAuthor[]> {
     .select(BOX_SELECT)
     .eq('author_id', authorId)
     .eq('status', 'published')
+    .is('group_id', null)
     .order('published_at', { ascending: false })
     .limit(40)
   if (error) throw error
@@ -121,12 +123,12 @@ export function useSearchBoxes(q: string) {
 export function useCreateBox() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: Pick<Box, 'author_id' | 'type' | 'content' | 'payload'> & { tags?: string[] }) => {
-      const { tags, ...box } = input
+    mutationFn: async (input: Pick<Box, 'author_id' | 'type' | 'content' | 'payload'> & { tags?: string[]; group_id?: string | null }) => {
+      const { tags, group_id, ...box } = input
 
       const { data, error } = await supabase
         .from('boxes')
-        .insert({ ...box, status: 'published', published_at: new Date().toISOString() })
+        .insert({ ...box, group_id: group_id ?? null, status: 'published', published_at: new Date().toISOString() })
         .select()
         .single()
       if (error) throw error
@@ -161,9 +163,12 @@ export function useCreateBox() {
 
       return data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['boxes', 'feed'] })
       qc.invalidateQueries({ queryKey: ['boxes', 'author-count'] })
+      if (data?.group_id) {
+        qc.invalidateQueries({ queryKey: ['social-group-boxes', data.group_id] })
+      }
     },
   })
 }

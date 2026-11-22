@@ -80,8 +80,9 @@ export function useMessages(
   // Realtime: incoming messages and system events arrive immediately
   useEffect(() => {
     if (!conversationId) return
+    const channelId = `messages:${conversationId}:${crypto.randomUUID()}`
     const channel = supabase
-      .channel(`messages:${conversationId}`)
+      .channel(channelId)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -92,7 +93,10 @@ export function useMessages(
         qc.invalidateQueries({ queryKey: ['conversations', userId] })
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      void channel.unsubscribe()
+      void supabase.removeChannel(channel)
+    }
   }, [conversationId, userId, qc])
 
   // Mark as read when opening the conversation

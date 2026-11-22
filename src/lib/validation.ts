@@ -46,3 +46,8 @@ export const createGroupSchema = z.strictObject({
 export const groupTextMessageSchema = plainText(1, 4000)
 export const boxContentSchema = plainText(1, 10000)
 export const commentContentSchema = plainText(1, 2000)
+
+export const storyCaptionSchema = plainText(1, 280)
+export const socialGroupNameSchema = plainText(2, 80)
+export const socialGroupDescriptionSchema = plainText(0, 500)
+export const socialGroupJoinMessageSchema = plainText(0, 240)

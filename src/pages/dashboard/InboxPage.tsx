@@ -63,11 +63,14 @@ export default function InboxPage() {
               type="button"
               onClick={() => setNewChatOpen(true)}
               className="chat-new-btn"
+              aria-label="New group or chat"
+              title="Create a private group or start a direct chat"
               aria-haspopup="dialog"
               aria-expanded={newChatOpen}
             >
-              <Plus size={14} strokeWidth={3} aria-hidden="true" />
-              <span>New</span>
+              <Plus size={13} strokeWidth={3} aria-hidden="true" />
+              <Users size={13} strokeWidth={2.8} aria-hidden="true" />
+              <span>New group</span>
             </button>
           </div>
 
@@ -109,7 +112,7 @@ export default function InboxPage() {
                   'No matching conversations.'
                 ) : (
                   <>
-                    No conversations.<br />Start a chat or create a group with + New.
+                    No conversations.<br />Create a group or start a chat with + New group.
                   </>
                 )}
               </div>

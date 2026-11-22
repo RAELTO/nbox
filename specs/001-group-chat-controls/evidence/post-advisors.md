@@ -64,3 +64,23 @@ The table maps engineering changes to relevant risks and controls. [OWASP Top 10
 
 - Closing with other active members raises `group_other_members_exist`.
 - The requested group creator constraint requires a non-null `created_by`, and the requested foreign key uses `ON DELETE SET NULL`. Deleting a creator profile while its group rows still exist therefore fails the group constraint.
+
+## Live verification for stories, social groups, and admin chat force-close
+
+Applied `20260913120000_stories_social_groups_and_admin_close.sql` through Supabase MCP on project `korxgckhjvsrknunqiif` on 2026-11-22 UTC. MCP recorded the live migration as version `20261122022308` under `stories_social_groups_and_admin_close`. Sent the PostgREST schema reload notification and verified `public.stories` in the `supabase_realtime` publication.
+
+- `supabase/tests/group_chat_controls.sql` passed through `execute_sql` and reached its rollback.
+- `supabase/tests/stories_and_social_groups.sql` passed through `execute_sql` and reached its rollback. It verified force-close visibility for all participants, the retry and authentic close event, story expiry and views, private box access and search, and community membership, moderation, pinning, and deletion.
+- A separate query after both rollbacks returned `0` auth users with emails matching `%@example.invalid`.
+
+| Advisor finding | Before | After | New finding identities |
+| --- | ---: | ---: | ---: |
+| Leaked password protection disabled | 1 | 1 | 0 |
+| Unindexed foreign keys | 9 | 9 | 0 |
+| RLS initplan | 32 | 27 | 0 |
+| Multiple permissive policies | 19 | 9 | 0 |
+| Unused indexes (informational) | 21 | 26 | 6 |
+
+Compared findings by lint name and detail. The existing security warning is for the project's Auth configuration. [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+
+The final performance snapshot includes six new unused-index notices. The migration adds full indexes on `group_members.user_id` and `boxes.group_id` to cover foreign-key operations across all membership and publication states. [Supabase database linter](https://supabase.com/docs/guides/database/database-linter)

@@ -22,7 +22,7 @@ export default function MessageNotifier() {
   useEffect(() => {
     if (!user?.id) return
     const channel = supabase
-      .channel(`msg-notifier:${user.id}`)
+      .channel(`msg-notifier:${user.id}:${crypto.randomUUID()}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
@@ -31,7 +31,10 @@ export default function MessageNotifier() {
         qc.invalidateQueries({ queryKey: ['conversations', user.id] })
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      void channel.unsubscribe()
+      void supabase.removeChannel(channel)
+    }
   }, [user?.id, qc])
 
   useEffect(() => {

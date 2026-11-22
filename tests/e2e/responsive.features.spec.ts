@@ -17,6 +17,8 @@ const GROUP_ID = '44444444-4444-4444-8444-444444444444'
 const DIRECT_ID = '55555555-5555-4555-8555-555555555555'
 const PINNED_BOX_ID = '66666666-6666-4666-8666-666666666666'
 const MEDIA_BOX_ID = '77777777-7777-4777-8777-777777777777'
+const STORY_ID = '88888888-8888-4888-8888-888888888888'
+const SOCIAL_GROUP_ID = '99999999-9999-4999-8999-999999999999'
 
 function supabaseStorageKey(): string {
   const env = { ...loadEnv('e2e', process.cwd(), ''), ...process.env }
@@ -475,6 +477,90 @@ async function installMockSessionAndApi(page: Page) {
       return json([])
     }
 
+    if (pathname.endsWith('/stories')) {
+      if (method === 'POST') {
+        return json({ id: STORY_ID }, 201)
+      }
+      return json([
+        {
+          id: STORY_ID,
+          author_id: CONTACT_A_ID,
+          media_url: null,
+          caption: 'Real skate session drop for 24h',
+          bg_color: 'accent-3',
+          created_at: now,
+          expires_at: new Date(Date.now() + 20 * 3600_000).toISOString(),
+          author: {
+            id: CONTACT_A_ID,
+            username: 'alex_skate',
+            display_name: 'Alex Skate',
+            avatar_url: null,
+            role: 'user',
+          },
+        },
+      ])
+    }
+
+    if (pathname.endsWith('/story_views')) {
+      return json([])
+    }
+
+    if (pathname.endsWith('/groups')) {
+      const groupRow = {
+        id: SOCIAL_GROUP_ID,
+        name: 'Street Zines',
+        slug: 'street-zines',
+        description: 'Brutalist printmakers & skate photography.',
+        accent_color: 'accent-3',
+        visibility: 'public',
+        join_policy: 'approval',
+        post_policy: 'members',
+        created_by: USER_ID,
+        pinned_box_id: null,
+        created_at: now,
+        updated_at: now,
+        group_members: [
+          { user_id: USER_ID, role: 'admin', status: 'active' },
+          { user_id: CONTACT_A_ID, role: 'member', status: 'active' },
+        ],
+      }
+      return json(isSingle ? groupRow : [groupRow])
+    }
+
+    if (pathname.endsWith('/group_members')) {
+      return json([
+        {
+          group_id: SOCIAL_GROUP_ID,
+          user_id: USER_ID,
+          role: 'admin',
+          status: 'active',
+          joined_at: now,
+          profile: { id: USER_ID, username: 'demo_brutal', display_name: 'Demo Brutal', avatar_url: null },
+        },
+        {
+          group_id: SOCIAL_GROUP_ID,
+          user_id: CONTACT_A_ID,
+          role: 'member',
+          status: 'active',
+          joined_at: now,
+          profile: { id: CONTACT_A_ID, username: 'alex_skate', display_name: 'Alex Skate', avatar_url: null },
+        },
+      ])
+    }
+
+    if (pathname.endsWith('/group_join_requests')) {
+      const reqRow = {
+        id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1',
+        group_id: SOCIAL_GROUP_ID,
+        user_id: CONTACT_B_ID,
+        message: 'Excited to share print zines!',
+        status: 'pending',
+        created_at: now,
+        user: { id: CONTACT_B_ID, username: 'maya_zine', display_name: 'Maya Zine', avatar_url: null },
+      }
+      return json(isSingle ? null : [reqRow])
+    }
+
     return json(isSingle ? null : [])
   })
 
@@ -537,7 +623,7 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByText('Weekend Crew')).toBeVisible()
       await assertNoHorizontalOverflow(page, `inbox list ${vp.name}`)
 
-      await page.getByRole('button', { name: 'New' }).click()
+      await page.getByRole('button', { name: 'New group or chat' }).click()
       const createDialog = page.getByRole('dialog', { name: 'New chat' })
       await expect(createDialog).toBeVisible()
       await assertNoHorizontalOverflow(page, `create group dialog ${vp.name}`)
@@ -566,8 +652,11 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator('.chat-thread audio')).toHaveCount(0)
       expect(telemetry.signedUrlCalls).toBe(0)
 
-      await expect(page.getByText('An admin disabled voice notes in this group.')).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Voice notes are disabled in this group' })).toBeDisabled()
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+      const disabledGroupMic = page.getByRole('button', { name: 'Voice notes are disabled in this group' })
+      await expect(disabledGroupMic).toBeDisabled()
+      await disabledGroupMic.hover()
+      await expect(page.getByRole('tooltip')).toContainText('An admin disabled voice notes in this group.')
       const msgInput = page.getByRole('textbox', { name: 'Message' })
       await msgInput.fill('Text works while voice is blocked')
       await page.getByRole('button', { name: 'Send message' }).click()
@@ -579,8 +668,35 @@ for (const vp of VIEWPORTS) {
       await expect(detailsDialog).toBeVisible()
       await expect(detailsDialog.getByText('PRIVATE TO YOU')).toBeVisible()
       await expect(detailsDialog.getByText('ADMIN CONTROL')).toBeVisible()
+      await expect(detailsDialog.getByRole('button', { name: 'Delete group' })).toBeVisible()
       await assertNoHorizontalOverflow(page, `group details ${vp.name}`)
       await assertNoBlockingAxeViolations(page, '.group-details-panel')
+    })
+
+    test(`real stories and community groups fit ${vp.name}`, async ({ page }) => {
+      await installMockSessionAndApi(page)
+      await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+      await expect(page.getByRole('region', { name: 'Stories' })).toBeVisible()
+      await expect(page.getByRole('button', { name: /View Alex Skate/i })).toBeVisible()
+      await expect(page.getByText('Kenji')).toHaveCount(0)
+      await assertNoHorizontalOverflow(page, `home stories ${vp.name}`)
+
+      await page.getByRole('button', { name: /View Alex Skate/i }).click()
+      const viewer = page.getByRole('dialog')
+      await expect(viewer.getByText('Real skate session drop for 24h')).toBeVisible()
+      await viewer.getByRole('button', { name: 'Close story viewer' }).click()
+
+      await page.goto('/groups', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByRole('link', { name: 'Street Zines' })).toBeVisible()
+      await assertNoHorizontalOverflow(page, `groups directory ${vp.name}`)
+
+      await page.getByRole('link', { name: 'Street Zines' }).click()
+      await expect(page.getByRole('heading', { name: 'Street Zines' })).toBeVisible()
+      await page.getByRole('tab', { name: /Requests/i }).click()
+      await expect(page.getByText('Excited to share print zines!')).toBeVisible()
+      await assertNoHorizontalOverflow(page, `group detail requests ${vp.name}`)
+      await assertNoBlockingAxeViolations(page, '#main-content')
     })
 
     test(`notifications require explicit mark-read actions at ${vp.name}`, async ({ page }) => {

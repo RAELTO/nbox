@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { LoaderCircle, Lock, Mic, MicOff, Paperclip, Send, Smile } from 'lucide-react'
 import { mapGroupChatError, type ConversationKind } from '../../features/chat/conversationTypes'
 import { useSendMessage } from '../../features/chat/useMessages'
@@ -38,6 +38,9 @@ export default function ChatComposer({
   const [sendError, setSendError] = useState<string | null>(null)
   const [isPreparingVoice, setIsPreparingVoice] = useState(false)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [voiceTooltipOpen, setVoiceTooltipOpen] = useState(false)
+  const voiceTooltipId = useId()
+  const voiceWrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const voiceStartPendingRef = useRef(false)
@@ -73,6 +76,15 @@ export default function ChatComposer({
   const blockedNotice = isGroup && (groupVoiceDisabled || voicePermission.data?.reason === 'group_voice_disabled')
     ? GROUP_VOICE_DISABLED_MESSAGE
     : VOICE_NOTES_BLOCKED_MESSAGE
+  const voiceBlockedReason = blockedByPolicy
+    ? blockedNotice
+    : !voice.isSupported
+      ? 'Voice recording is unavailable on this browser. Text messages still work.'
+      : voicePermission.isError
+        ? 'Could not verify voice-note permission. Click to check again.'
+        : null
+  const isVoiceUnavailable = Boolean(voiceBlockedReason)
+  const isVoiceBusy = isPreparingVoice || voicePermission.isFetching
 
   function handleEmojiSelect(emoji: string) {
     const input = inputRef.current
@@ -217,51 +229,67 @@ export default function ChatComposer({
             : <Send size={17} strokeWidth={2.5} aria-hidden="true" />}
         </button>
       ) : (
-        <button
-          type="button"
-          className="chat-composer-mic"
-          onClick={() => void handleVoiceStart()}
-          disabled={
-            !voice.isSupported
-            || isPreparingVoice
-            || voicePermission.isFetching
-            || blockedByPolicy
-            || voicePermission.isError
-          }
-          aria-label={
-            blockedByPolicy
-              ? isGroup
-                ? 'Voice notes are disabled in this group'
-                : 'Voice notes are disabled by the recipient'
-              : voice.isSupported
-                ? 'Record voice message'
-                : 'Voice recording unavailable on this device'
-          }
-          title={
-            blockedByPolicy
-              ? blockedNotice
-              : voice.isSupported
-                ? 'Record voice message'
-                : 'Voice recording is not supported by this browser'
-          }
+        <div
+          ref={voiceWrapRef}
+          className="voice-mic-wrap"
+          onMouseEnter={() => { if (isVoiceUnavailable) setVoiceTooltipOpen(true) }}
+          onMouseLeave={() => setVoiceTooltipOpen(false)}
+          onBlur={event => {
+            if (!voiceWrapRef.current?.contains(event.relatedTarget as Node | null)) {
+              setVoiceTooltipOpen(false)
+            }
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Escape' && voiceTooltipOpen) {
+              event.stopPropagation()
+              setVoiceTooltipOpen(false)
+            }
+          }}
         >
-          {isPreparingVoice || voicePermission.isFetching
-            ? <LoaderCircle className="voice-spinner" size={17} aria-hidden="true" />
-            : <Mic size={17} strokeWidth={2.7} aria-hidden="true" />}
-        </button>
-      )}
-      {(blockedByPolicy || voicePermission.isError || (!compact && !voice.isSupported)) && !voice.error && !sendError && (
-        <div className="voice-compose-notice" role="status">
-          <MicOff size={14} aria-hidden="true" />
-          <span>
-            {blockedByPolicy
-              ? blockedNotice
-              : !voice.isSupported
-                ? 'Voice recording is unavailable on this browser. Text messages still work.'
-                : 'Could not verify voice-note permission.'}
-          </span>
-          {voicePermission.isError && (
-            <button type="button" onClick={() => void voicePermission.refetch()}>Check again</button>
+          <button
+            type="button"
+            className={`chat-composer-mic${isVoiceUnavailable ? ' is-blocked' : ''}`}
+            aria-disabled={isVoiceUnavailable || isVoiceBusy ? 'true' : undefined}
+            aria-describedby={isVoiceUnavailable ? voiceTooltipId : undefined}
+            onFocus={() => { if (isVoiceUnavailable) setVoiceTooltipOpen(true) }}
+            onClick={() => {
+              if (voicePermission.isError && !blockedByPolicy && !voicePermission.isFetching) {
+                setVoiceTooltipOpen(false)
+                void voicePermission.refetch()
+                return
+              }
+              if (isVoiceUnavailable) {
+                setVoiceTooltipOpen(open => !open)
+                return
+              }
+              if (isVoiceBusy) return
+              void handleVoiceStart()
+            }}
+            aria-label={
+              blockedByPolicy
+                ? isGroup
+                  ? 'Voice notes are disabled in this group'
+                  : 'Voice notes are disabled by the recipient'
+                : voicePermission.isError
+                  ? 'Could not verify voice-note permission'
+                  : voice.isSupported
+                    ? 'Record voice message'
+                    : 'Voice recording unavailable on this device'
+            }
+          >
+            {isVoiceBusy ? (
+              <LoaderCircle className="voice-spinner" size={17} aria-hidden="true" />
+            ) : isVoiceUnavailable ? (
+              <MicOff size={17} strokeWidth={2.7} aria-hidden="true" />
+            ) : (
+              <Mic size={17} strokeWidth={2.7} aria-hidden="true" />
+            )}
+          </button>
+          {isVoiceUnavailable && voiceTooltipOpen && voiceBlockedReason && (
+            <div id={voiceTooltipId} role="tooltip" className="voice-mic-tooltip">
+              <MicOff size={13} strokeWidth={2.7} aria-hidden="true" />
+              <span>{voiceBlockedReason}</span>
+            </div>
           )}
         </div>
       )}

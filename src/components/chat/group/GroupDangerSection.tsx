@@ -1,25 +1,25 @@
-import { Lock, LogOut } from 'lucide-react'
+import { LogOut, Trash2 } from 'lucide-react'
 
 interface GroupDangerSectionProps {
   memberCount: number
+  isAdmin: boolean
   isClosed: boolean
   isLastAdminWithOthers: boolean
-  canCloseGroup: boolean
   leaving: boolean
-  closing: boolean
+  deleting: boolean
   onLeave: () => void
-  onCloseGroup: () => void
+  onDeleteGroup: () => void
 }
 
 export default function GroupDangerSection({
   memberCount,
+  isAdmin,
   isClosed,
   isLastAdminWithOthers,
-  canCloseGroup,
   leaving,
-  closing,
+  deleting,
   onLeave,
-  onCloseGroup,
+  onDeleteGroup,
 }: GroupDangerSectionProps) {
   if (isClosed) return null
 
@@ -27,7 +27,7 @@ export default function GroupDangerSection({
     <section className="group-details-section group-danger-zone">
       {isLastAdminWithOthers && (
         <p className="group-section-copy">
-          Assign another admin before leaving so the group is never left without an administrator.
+          Assign another admin before leaving, or delete this group permanently as admin.
         </p>
       )}
 
@@ -36,7 +36,7 @@ export default function GroupDangerSection({
           <button
             type="button"
             className="btn btn-small group-leave-btn"
-            disabled={isLastAdminWithOthers || leaving}
+            disabled={isLastAdminWithOthers || leaving || deleting}
             onClick={onLeave}
           >
             <LogOut size={14} strokeWidth={2.7} aria-hidden="true" />
@@ -44,15 +44,15 @@ export default function GroupDangerSection({
           </button>
         )}
 
-        {canCloseGroup && (
+        {isAdmin && (
           <button
             type="button"
             className="btn btn-small btn-primary"
-            disabled={closing}
-            onClick={onCloseGroup}
+            disabled={deleting || leaving}
+            onClick={onDeleteGroup}
           >
-            <Lock size={14} strokeWidth={2.7} aria-hidden="true" />
-            {closing ? 'Closing…' : 'Close group'}
+            <Trash2 size={14} strokeWidth={2.7} aria-hidden="true" />
+            {deleting ? 'Deleting…' : 'Delete group'}
           </button>
         )}
       </div>

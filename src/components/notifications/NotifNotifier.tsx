@@ -14,7 +14,7 @@ export default function NotifNotifier() {
   useEffect(() => {
     if (!user?.id) return
     const channel = supabase
-      .channel(`notif-notifier:${user.id}`)
+      .channel(`notif-notifier:${user.id}:${crypto.randomUUID()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -25,7 +25,10 @@ export default function NotifNotifier() {
         qc.invalidateQueries({ queryKey: ['notif-count', user.id] })
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      void channel.unsubscribe()
+      void supabase.removeChannel(channel)
+    }
   }, [user?.id, qc])
 
   return null

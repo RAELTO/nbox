@@ -8,7 +8,7 @@ import {
 } from '../../../features/chat/conversationTypes'
 import {
   useAddGroupMember,
-  useCloseGroup,
+  useDeleteGroup,
   useGroupMembers,
   useGroupVoiceState,
   useLeaveGroup,
@@ -56,7 +56,7 @@ export default function GroupDetailsDialog({
   const removeMember = useRemoveGroupMember(group.id, userId)
   const setMemberRole = useSetGroupMemberRole(group.id, userId)
   const leaveGroup = useLeaveGroup(group.id, userId)
-  const closeGroup = useCloseGroup(group.id, userId)
+  const deleteGroup = useDeleteGroup(group.id, userId)
 
   const [editingName, setEditingName] = useState<string | null>(null)
   const [selectedNewMemberId, setSelectedNewMemberId] = useState('')
@@ -71,7 +71,6 @@ export default function GroupDetailsDialog({
   const isClosed = (voiceState?.status ?? group.status) === 'closed'
   const adminCount = members.filter(m => m.role === 'admin').length
   const isLastAdminWithOthers = isAdmin && adminCount <= 1 && members.length > 1
-  const canCloseGroup = isAdmin && !isClosed && members.length === 1
 
   const addableContacts = useMemo(() => {
     const memberIds = new Set(members.map(m => m.user_id))
@@ -175,18 +174,18 @@ export default function GroupDetailsDialog({
     }
   }
 
-  async function handleCloseGroup() {
+  async function handleDeleteGroup() {
     const ok = await confirm({
-      title: `Close ${group.name}?`,
-      message: `Closing ${group.name} permanently ends this group conversation.`,
-      confirmLabel: 'Close group',
+      title: `Delete ${group.name}?`,
+      message: `Deleting ${group.name} permanently ends this group and removes access for all members.`,
+      confirmLabel: 'Delete group',
       danger: true,
     })
     if (!ok) return
     setActionError(null)
     try {
-      await closeGroup.mutateAsync()
-      toast(`${group.name} has been closed.`)
+      await deleteGroup.mutateAsync()
+      toast(`${group.name} has been deleted.`)
       onGroupExited()
     } catch (error) {
       setActionError(mapGroupChatError(error))
@@ -316,13 +315,13 @@ export default function GroupDetailsDialog({
 
           <GroupDangerSection
             memberCount={members.length}
+            isAdmin={isAdmin}
             isClosed={isClosed}
             isLastAdminWithOthers={isLastAdminWithOthers}
-            canCloseGroup={canCloseGroup}
             leaving={leaveGroup.isPending}
-            closing={closeGroup.isPending}
+            deleting={deleteGroup.isPending}
             onLeave={() => void handleLeaveGroup()}
-            onCloseGroup={() => void handleCloseGroup()}
+            onDeleteGroup={() => void handleDeleteGroup()}
           />
         </div>
       </div>
