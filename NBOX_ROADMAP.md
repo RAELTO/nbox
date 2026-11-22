@@ -117,6 +117,24 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [x] Selector de emojis nativos con licencia MIT, inserción en el cursor y carga diferida
 - [ ] Adjuntos y llamadas — stubs "coming soon"
 
+### Group chat — piloto Spec Kit
+- [x] Constitución del proyecto y especificación funcional trazable
+- [x] Investigación de arquitectura frontend, esquema actual, RLS, Realtime y Storage privado
+- [x] Modelo de datos y contratos de UI/RPC para grupos privados de hasta 50 miembros
+- [x] Plan de implementación con controles administrativos y personales para notas de voz
+- [x] Lista de 55 tareas organizada por historias, dependencias y validación independiente
+- [x] Análisis cruzado de requisitos, plan y tareas sin conflictos constitucionales críticos
+- [ ] Implementar la base compartida de conversaciones directas y grupales
+- [ ] Entregar el MVP: crear grupo privado, buscarlo y enviar texto en cinco viewports
+- [ ] Implementar política administrativa de publicación de voz y eventos de sistema auténticos
+- [ ] Implementar preferencia personal de recepción sin descargar audio bloqueado
+- [ ] Completar administración, revocación, reingreso, continuidad de admin y cierre seguro
+- [ ] Ejecutar matriz RLS/concurrencia, regresión directa, Playwright, Axe, Android real y bundle review
+
+**Trazabilidad:** [`specs/001-group-chat-controls/`](specs/001-group-chat-controls/) es la fuente de
+verdad de esta capacidad. La migración reservada para implementación es
+`20260912190000_group_chat_controls.sql`. El piloto documental no modifica Supabase ni habilita UI.
+
 ### Notas de voz en chat — fase directa completada
 - [x] Definir arquitectura: audio en Storage privado, metadatos en Postgres y borrador local
 - [x] Crear `message_attachments`, bucket privado `chat-media`, límites MIME/tamaño y RLS por participante
@@ -187,7 +205,7 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [ ] Pinned comment por el autor
 - [ ] Compartir drop directamente a un contacto (DM)
 
-### Groups (Fase futura)
+### Social groups y feeds grupales (Fase futura, separado de Group chat)
 - [ ] Tabla `groups`, `group_members`, `group_boxes`
 - [ ] GroupPage: feed de boxes del grupo
 - [ ] Invitar contactos a un grupo
@@ -204,13 +222,13 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 
 ## Próximos pasos sugeridos (orden de impacto)
 
-1. **Notification read UX** — No marcar todo automáticamente al abrir; añadir acciones explícitas
-2. **New chat** — Selector de contactos sobre el backend de conversaciones existente
-3. **Completar shares** — Box original compartida, Saved share y envío directo a contacto
-4. **Saved Collections backend** — Tabla, RLS y UI responsive
-5. **Ranking `For You` / `Loud`** — Diferenciar realmente los modos del feed
-6. **Admin panel + reportes/bloqueos** — Necesario antes del lanzamiento público
-7. **Notas de voz y adjuntos de chat** — Storage privado, mensajes multimedia, caché local y políticas por conversación
+1. **Group chat MVP** — Ejecutar US1 del piloto Spec Kit sobre la arquitectura de chat existente
+2. **Group voice controls** — Política administrativa, recepción personal y eventos auténticos
+3. **Notification read UX** — No marcar todo automáticamente al abrir; añadir acciones explícitas
+4. **Completar shares** — Box original compartida, Saved share y envío directo a contacto
+5. **Saved Collections backend** — Tabla, RLS y UI responsive
+6. **Ranking `For You` / `Loud`** — Diferenciar realmente los modos del feed
+7. **Admin panel + reportes/bloqueos** — Necesario antes del lanzamiento público
 
 ---
 
