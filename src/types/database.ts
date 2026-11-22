@@ -22,6 +22,8 @@ export type Database = {
           role: string
           is_banned: boolean
           voice_notes_enabled: boolean
+          pinned_box_id: string | null
+          links: Json
           last_seen_at: string | null
           created_at: string
           updated_at: string
@@ -35,6 +37,8 @@ export type Database = {
           role?: string
           is_banned?: boolean
           voice_notes_enabled?: boolean
+          pinned_box_id?: string | null
+          links?: Json
           last_seen_at?: string | null
           created_at?: string
           updated_at?: string
@@ -48,6 +52,8 @@ export type Database = {
           role?: string
           is_banned?: boolean
           voice_notes_enabled?: boolean
+          pinned_box_id?: string | null
+          links?: Json
           last_seen_at?: string | null
           created_at?: string
           updated_at?: string
@@ -294,24 +300,151 @@ export type Database = {
         ]
       }
       conversations: {
-        Row: { id: string; type: 'direct'; user_a: string; user_b: string; last_message_at: string | null; last_message_text: string | null; created_at: string }
-        Insert: { id?: string; type?: 'direct'; user_a: string; user_b: string; last_message_at?: string | null; last_message_text?: string | null; created_at?: string }
-        Update: { last_message_at?: string | null; last_message_text?: string | null }
+        Row: {
+          id: string
+          type: 'direct' | 'group'
+          user_a: string | null
+          user_b: string | null
+          name: string | null
+          created_by: string | null
+          status: 'active' | 'closed'
+          voice_notes_allowed: boolean
+          voice_policy_version: number
+          next_group_sequence: number
+          last_message_id: string | null
+          last_message_sender_id: string | null
+          last_message_at: string | null
+          last_message_text: string | null
+          created_at: string
+          updated_at: string
+          closed_at: string | null
+        }
+        Insert: {
+          id?: string
+          type?: 'direct' | 'group'
+          user_a?: string | null
+          user_b?: string | null
+          name?: string | null
+          created_by?: string | null
+          status?: 'active' | 'closed'
+          voice_notes_allowed?: boolean
+          voice_policy_version?: number
+          next_group_sequence?: number
+          last_message_id?: string | null
+          last_message_sender_id?: string | null
+          last_message_at?: string | null
+          last_message_text?: string | null
+          created_at?: string
+          updated_at?: string
+          closed_at?: string | null
+        }
+        Update: {
+          name?: string | null
+          status?: 'active' | 'closed'
+          voice_notes_allowed?: boolean
+          voice_policy_version?: number
+          next_group_sequence?: number
+          last_message_id?: string | null
+          last_message_sender_id?: string | null
+          last_message_at?: string | null
+          last_message_text?: string | null
+          updated_at?: string
+          closed_at?: string | null
+        }
         Relationships: [
           { foreignKeyName: 'conversations_user_a_fkey'; columns: ['user_a']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
-          { foreignKeyName: 'conversations_user_b_fkey'; columns: ['user_b']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
+          { foreignKeyName: 'conversations_user_b_fkey'; columns: ['user_b']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+          { foreignKeyName: 'conversations_created_by_fkey'; columns: ['created_by']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
         ]
       }
       conversation_participants: {
-        Row: { conversation_id: string; user_id: string; last_read_at: string | null; archived_at: string | null; deleted_at: string | null; voice_notes_mode: 'inherit' | 'allow' | 'block' }
-        Insert: { conversation_id: string; user_id: string; last_read_at?: string | null; archived_at?: string | null; deleted_at?: string | null; voice_notes_mode?: 'inherit' | 'allow' | 'block' }
-        Update: { last_read_at?: string | null; archived_at?: string | null; deleted_at?: string | null; voice_notes_mode?: 'inherit' | 'allow' | 'block' }
+        Row: {
+          conversation_id: string
+          user_id: string
+          role: 'member' | 'admin'
+          joined_at: string
+          history_from_sequence: number | null
+          last_read_at: string | null
+          archived_at: string | null
+          deleted_at: string | null
+          voice_notes_mode: 'inherit' | 'allow' | 'block'
+        }
+        Insert: {
+          conversation_id: string
+          user_id: string
+          role?: 'member' | 'admin'
+          joined_at?: string
+          history_from_sequence?: number | null
+          last_read_at?: string | null
+          archived_at?: string | null
+          deleted_at?: string | null
+          voice_notes_mode?: 'inherit' | 'allow' | 'block'
+        }
+        Update: {
+          role?: 'member' | 'admin'
+          joined_at?: string
+          history_from_sequence?: number | null
+          last_read_at?: string | null
+          archived_at?: string | null
+          deleted_at?: string | null
+          voice_notes_mode?: 'inherit' | 'allow' | 'block'
+        }
         Relationships: []
       }
       messages: {
-        Row: { id: string; conversation_id: string; sender_id: string; body: string; kind: 'text' | 'image' | 'voice' | 'system'; created_at: string; edited_at: string | null; deleted_at: string | null }
-        Insert: { id?: string; conversation_id: string; sender_id: string; body: string; kind?: 'text' | 'image' | 'voice' | 'system'; created_at?: string; edited_at?: string | null; deleted_at?: string | null }
-        Update: { body?: string; edited_at?: string | null; deleted_at?: string | null }
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string | null
+          body: string
+          kind: 'text' | 'image' | 'voice' | 'system'
+          group_sequence: number | null
+          client_request_id: string | null
+          system_event_type:
+            | 'group_created'
+            | 'member_added'
+            | 'member_removed'
+            | 'member_left'
+            | 'member_promoted'
+            | 'member_demoted'
+            | 'group_renamed'
+            | 'group_voice_policy_changed'
+            | 'group_closed'
+            | null
+          system_event_payload: Json | null
+          created_at: string
+          edited_at: string | null
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id?: string | null
+          body: string
+          kind?: 'text' | 'image' | 'voice' | 'system'
+          group_sequence?: number | null
+          client_request_id?: string | null
+          system_event_type?:
+            | 'group_created'
+            | 'member_added'
+            | 'member_removed'
+            | 'member_left'
+            | 'member_promoted'
+            | 'member_demoted'
+            | 'group_renamed'
+            | 'group_voice_policy_changed'
+            | 'group_closed'
+            | null
+          system_event_payload?: Json | null
+          created_at?: string
+          edited_at?: string | null
+          deleted_at?: string | null
+        }
+        Update: {
+          body?: string
+          edited_at?: string | null
+          deleted_at?: string | null
+        }
         Relationships: [
           { foreignKeyName: 'messages_sender_id_fkey'; columns: ['sender_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
           { foreignKeyName: 'messages_conversation_id_fkey'; columns: ['conversation_id']; referencedRelation: 'conversations'; referencedColumns: ['id'] }
@@ -516,6 +649,118 @@ export type Database = {
           p_duration_ms: number
         }
         Returns: string
+      }
+      create_group_conversation: {
+        Args: {
+          p_name: string
+          p_member_ids: string[]
+          p_client_request_id: string
+        }
+        Returns: string
+      }
+      publish_group_text_message: {
+        Args: {
+          p_conversation_id: string
+          p_body: string
+          p_client_request_id: string
+        }
+        Returns: string
+      }
+      publish_group_voice_message: {
+        Args: {
+          p_message_id: string
+          p_attachment_id: string
+          p_conversation_id: string
+          p_storage_path: string
+          p_mime_type: string
+          p_size_bytes: number
+          p_duration_ms: number
+          p_client_request_id: string
+          p_expected_policy_version: number
+        }
+        Returns: string
+      }
+      set_group_voice_publication: {
+        Args: {
+          p_conversation_id: string
+          p_enabled: boolean
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      set_group_voice_reception: {
+        Args: {
+          p_conversation_id: string
+          p_mode: 'inherit' | 'allow' | 'block'
+        }
+        Returns: Json
+      }
+      add_group_member: {
+        Args: {
+          p_conversation_id: string
+          p_user_id: string
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      remove_group_member: {
+        Args: {
+          p_conversation_id: string
+          p_user_id: string
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      leave_group: {
+        Args: {
+          p_conversation_id: string
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      set_group_member_role: {
+        Args: {
+          p_conversation_id: string
+          p_user_id: string
+          p_role: 'member' | 'admin'
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      rename_group_conversation: {
+        Args: {
+          p_conversation_id: string
+          p_name: string
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      close_group_conversation: {
+        Args: {
+          p_conversation_id: string
+          p_client_request_id: string
+        }
+        Returns: Json
+      }
+      get_inbox_conversations: {
+        Args: {
+          p_limit?: number
+          p_cursor_at?: string | null
+          p_cursor_id?: string | null
+        }
+        Returns: Json
+      }
+      get_group_members: {
+        Args: {
+          p_conversation_id: string
+        }
+        Returns: Json
+      }
+      get_group_voice_state: {
+        Args: {
+          p_conversation_id: string
+        }
+        Returns: Json
       }
     }
     Enums: Record<string, never>

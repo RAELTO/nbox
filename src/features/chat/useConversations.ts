@@ -56,7 +56,7 @@ export function useConversations(userId: string | undefined) {
 
       const lastMessageSenderMap = new Map<string, string>()
       for (const message of latestMessages ?? []) {
-        if (!lastMessageSenderMap.has(message.conversation_id)) {
+        if (message.sender_id && !lastMessageSenderMap.has(message.conversation_id)) {
           lastMessageSenderMap.set(message.conversation_id, message.sender_id)
         }
       }
