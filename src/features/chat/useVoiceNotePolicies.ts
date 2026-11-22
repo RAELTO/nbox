@@ -7,14 +7,16 @@ export type ConversationVoiceNotePolicy = 'inherit' | 'allow' | 'block'
 export interface VoiceNoteCapability {
   allowed: boolean
   reason: string
+  policyVersion?: number
 }
 
-export interface VoiceNoteSettings {
+interface VoiceNoteSettings {
   globalPolicy: GlobalVoiceNotePolicy
   conversationPolicy: ConversationVoiceNotePolicy
 }
 
 export const VOICE_NOTES_BLOCKED_MESSAGE = 'This person is not accepting voice notes in this chat.'
+export const GROUP_VOICE_DISABLED_MESSAGE = 'An admin disabled voice notes in this group.'
 
 export class VoiceNotesBlockedError extends Error {
   readonly code = 'VOICE_NOTES_BLOCKED_BY_RECIPIENT'
@@ -31,10 +33,11 @@ function normalizeCapability(data: unknown): VoiceNoteCapability {
     throw new Error('Voice-note permission returned no result.')
   }
 
-  const row = value as { allowed?: unknown; reason?: unknown }
+  const row = value as { allowed?: unknown; reason?: unknown; policy_version?: unknown }
   return {
     allowed: row.allowed === true,
     reason: typeof row.reason === 'string' ? row.reason : 'unknown',
+    policyVersion: typeof row.policy_version === 'number' ? row.policy_version : undefined,
   }
 }
 
@@ -49,7 +52,13 @@ export async function fetchVoiceNoteCapability(conversationId: string) {
 
 export async function assertVoiceNoteAllowed(conversationId: string) {
   const capability = await fetchVoiceNoteCapability(conversationId)
-  if (!capability.allowed) throw new VoiceNotesBlockedError()
+  if (!capability.allowed) {
+    throw new VoiceNotesBlockedError(
+      capability.reason === 'group_voice_disabled'
+        ? GROUP_VOICE_DISABLED_MESSAGE
+        : VOICE_NOTES_BLOCKED_MESSAGE,
+    )
+  }
   return capability
 }
 
@@ -58,10 +67,13 @@ export function isVoiceNotesBlockedError(error: unknown) {
   if (!error || typeof error !== 'object') return false
 
   const candidate = error as { code?: unknown; message?: unknown; details?: unknown }
+  const msg = typeof candidate.message === 'string' ? candidate.message : ''
   return candidate.code === 'VOICE_NOTES_BLOCKED_BY_RECIPIENT'
     || candidate.message === 'VOICE_NOTES_BLOCKED_BY_RECIPIENT'
     || candidate.details === 'VOICE_NOTES_BLOCKED_BY_RECIPIENT'
-    || (typeof candidate.message === 'string' && candidate.message.includes('VOICE_NOTES_BLOCKED_BY_RECIPIENT'))
+    || msg.includes('VOICE_NOTES_BLOCKED_BY_RECIPIENT')
+    || msg.includes('group_voice_disabled')
+    || msg.includes('stale_group_policy')
 }
 
 export function useVoiceNoteCapability(conversationId: string) {
@@ -117,6 +129,7 @@ export function useSetGlobalVoiceNotePolicy(userId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voice-note-settings', userId] })
+      queryClient.invalidateQueries({ queryKey: ['group-voice-state'] })
       queryClient.invalidateQueries({ queryKey: ['profile', userId] })
     },
   })
@@ -136,6 +149,8 @@ export function useSetConversationVoiceNotePolicy(conversationId: string, userId
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voice-note-settings', userId, conversationId] })
+      queryClient.invalidateQueries({ queryKey: ['group-voice-state', conversationId] })
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] })
     },
   })
 }

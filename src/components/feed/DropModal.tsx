@@ -23,10 +23,12 @@ import DropTypeSelector from './DropTypeSelector'
 
 interface DropModalProps {
   initialType?: BoxType
+  groupId?: string | null
+  groupName?: string
   onClose: () => void
 }
 
-export default function DropModal({ initialType = 'quick', onClose }: DropModalProps) {
+export default function DropModal({ initialType = 'quick', groupId = null, groupName, onClose }: DropModalProps) {
   const { user } = useAuth()
   const createBox = useCreateBox()
   const toast = useToast()
@@ -133,7 +135,7 @@ export default function DropModal({ initialType = 'quick', onClose }: DropModalP
         content ||= safeUrl
       }
 
-      await createBox.mutateAsync({ author_id: user.id, type, content, payload, tags: parsedTags })
+      await createBox.mutateAsync({ author_id: user.id, type, content, payload, tags: parsedTags, group_id: groupId })
       toast('Drop published.')
       onClose()
     } catch {
@@ -157,7 +159,7 @@ export default function DropModal({ initialType = 'quick', onClose }: DropModalP
         tabIndex={-1}
       >
         <div className="drop-header">
-          <h2 id={titleId} className="drop-title">NEW DROP</h2>
+          <h2 id={titleId} className="drop-title">{groupName ? `NEW DROP · ${groupName}` : 'NEW DROP'}</h2>
           <button type="button" onClick={onClose} className="drop-close-btn">
             <X size={13} strokeWidth={2.5} /> Close
           </button>

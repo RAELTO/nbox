@@ -114,7 +114,10 @@ export default function ActivityModal({
                 {row.vote && (
                   <div
                     className="activity-badge"
-                    style={{ background: row.vote === 'like' ? 'var(--accent-4)' : 'var(--accent-1)' }}
+                    style={{
+                      background: row.vote === 'like' ? 'var(--accent-4)' : 'var(--accent-1)',
+                      color: row.vote === 'like' ? 'var(--on-accent-4)' : 'var(--on-accent-1)',
+                    }}
                   >
                     {row.vote === 'like' ? <ThumbsUp size={14} strokeWidth={2.5} /> : <ThumbsDown size={14} strokeWidth={2.5} />}
                   </div>

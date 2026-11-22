@@ -109,13 +109,34 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 
 ### Perfil de usuario
 - [x] Ver boxes propias en perfil público
-- [ ] Tabs en perfil: Boxes | Media | Saves | About
-- [ ] Pinned box en perfil
-- [ ] Sección "About" con links y fecha de unión
+- [x] Tabs en perfil: Boxes | Media | Saves | About
+- [x] Pinned box en perfil
+- [x] Sección "About" con links y fecha de unión
 
 ### Inbox
 - [x] Selector de emojis nativos con licencia MIT, inserción en el cursor y carga diferida
 - [ ] Adjuntos y llamadas — stubs "coming soon"
+
+### Group chat — piloto Spec Kit
+- [x] Constitución del proyecto y especificación funcional trazable
+- [x] Investigación de arquitectura frontend, esquema actual, RLS, Realtime y Storage privado
+- [x] Modelo de datos y contratos de UI/RPC para grupos privados de hasta 50 miembros
+- [x] Plan de implementación con controles administrativos y personales para notas de voz
+- [x] Lista de 55 tareas organizada por historias, dependencias y validación independiente
+- [x] Análisis cruzado de requisitos, plan y tareas sin conflictos constitucionales críticos
+- [x] Implementar la base compartida de conversaciones directas y grupales
+- [x] Entregar el MVP: crear grupo privado, buscarlo y enviar texto en cinco viewports
+- [x] Implementar política administrativa de publicación de voz y eventos de sistema auténticos
+- [x] Implementar preferencia personal de recepción sin descargar audio bloqueado
+- [x] Completar administración, revocación, reingreso, continuidad de admin y cierre seguro
+- [ ] Ejecutar matriz RLS/concurrencia, regresión directa, Playwright, Axe, Android real y bundle review *(Migraciones aplicadas en vivo sobre `korxgckhjvsrknunqiif`, suite SQL rollback aprobada en Supabase real, Security/Performance Advisors sin nuevos hallazgos, Playwright 5 viewports/Axe/`public-chromium` y `react-doctor` aprobados; pendientes tests `authenticated.*` con credenciales `E2E_*` y prueba física en Chrome Android)*
+
+**Trazabilidad:** [`specs/001-group-chat-controls/`](specs/001-group-chat-controls/) es la fuente de
+verdad de esta capacidad. Las migraciones `20260912190000_group_chat_controls.sql` (registrada en vivo como
+`20261122014751_group_chat_controls`) y `20260912191000_profile_enhancements_and_security_hardening.sql`
+(registrada en vivo como `20261122014755_profile_enhancements_and_security_hardening`) quedaron aplicadas y
+validadas en el proyecto remoto junto con [`evidence/pre-advisors.md`](specs/001-group-chat-controls/evidence/pre-advisors.md)
+y [`evidence/post-advisors.md`](specs/001-group-chat-controls/evidence/post-advisors.md).
 
 ### Notas de voz en chat — fase directa completada
 - [x] Definir arquitectura: audio en Storage privado, metadatos en Postgres y borrador local
@@ -137,16 +158,16 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [x] Revalidar atómicamente al publicar y limpiar el archivo si la preferencia cambió durante el envío
 - [x] Mantener en chat directo la precedencia: excepción personal → preferencia global → permitir
 - [x] Probar bloqueo, continuidad del texto, preferencias, carreras y UI accesible en cinco viewports con Playwright
-- [ ] En grupos, permitir únicamente a administradores deshabilitar el envío para todo el grupo
-- [ ] En grupos, permitir bloqueo personal: mostrar placeholder y no descargar el audio para ese miembro
-- [ ] Registrar cambios administrativos como eventos de sistema protegidos contra suplantación
-- [ ] Extender a grupos la precedencia: bloqueo administrativo → excepción personal → preferencia global → permitir
+- [x] En grupos, permitir únicamente a administradores deshabilitar el envío para todo el grupo
+- [x] En grupos, permitir bloqueo personal: mostrar placeholder y no descargar el audio para ese miembro
+- [x] Registrar cambios administrativos como eventos de sistema protegidos contra suplantación
+- [x] Extender a grupos la precedencia: bloqueo administrativo → excepción personal → preferencia global → permitir
 
 **Contrato vigente para chats directos:** la preferencia de la persona receptora decide si admite audio. La excepción del chat puede heredar, permitir o bloquear y prevalece sobre el valor global. El remitente consulta antes de abrir el micrófono y vuelve a consultar antes de subir; la RPC revalida bajo bloqueo transaccional para cerrar carreras. Si la preferencia cambia después de subir, la publicación se rechaza, el objeto se elimina y el borrador local se conserva. Los mensajes de texto permanecen disponibles en todos los casos.
 
 ### Notificaciones
 - [x] Persistencia de lectura individual y masiva en `read_at`
-- [ ] Sustituir el auto-read al abrir por acciones explícitas "Mark read" y "Mark all read"
+- [x] Sustituir el auto-read al abrir por acciones explícitas "Mark read" y "Mark all read"
 - [ ] Menciones `@usuario` en boxes y comentarios
 
 ### Saved
@@ -187,15 +208,16 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 - [ ] Pinned comment por el autor
 - [ ] Compartir drop directamente a un contacto (DM)
 
-### Groups (Fase futura)
-- [ ] Tabla `groups`, `group_members`, `group_boxes`
-- [ ] GroupPage: feed de boxes del grupo
-- [ ] Invitar contactos a un grupo
+### Group chat vs Social groups
+- [x] Diferenciación entre chat grupal (`/nbox`) y comunidades (`/groups`)
+- [x] Tabla `groups`, `group_members`, `group_join_requests`, `boxes.group_id` con visibilidad `public | private`, políticas `open | approval` y moderación (`admin | moderator | member | ban`)
+- [x] `GroupsPage` y `GroupDetailPage`: feed de boxes del grupo, solicitudes de ingreso y ajustes
+- [x] Invitar contactos aceptados a un grupo
 
-### Stories (Fase futura)
-- [ ] Backend: tabla `stories`, expiración 24h
-- [ ] StoriesRail funcional (actualmente decorativo)
-- [ ] Vista fullscreen con timer
+### Stories
+- [x] Backend: tabla `stories` y `story_views`, expiración 24h y RLS
+- [x] `StoriesRail` funcional con carga real desde Supabase y creación de stories de texto/foto
+- [x] Vista fullscreen (`StoryViewerModal`) con timer, pausa y lista de espectadores
 
 ### Memories (Fase futura)
 - [ ] "On this day" desde boxes antiguas del usuario
@@ -204,13 +226,13 @@ NBOX (Neo Brutal Box) es una plataforma social con identidad neobrutalista fuert
 
 ## Próximos pasos sugeridos (orden de impacto)
 
-1. **Notification read UX** — No marcar todo automáticamente al abrir; añadir acciones explícitas
-2. **New chat** — Selector de contactos sobre el backend de conversaciones existente
-3. **Completar shares** — Box original compartida, Saved share y envío directo a contacto
-4. **Saved Collections backend** — Tabla, RLS y UI responsive
-5. **Ranking `For You` / `Loud`** — Diferenciar realmente los modos del feed
-6. **Admin panel + reportes/bloqueos** — Necesario antes del lanzamiento público
-7. **Notas de voz y adjuntos de chat** — Storage privado, mensajes multimedia, caché local y políticas por conversación
+1. **Group chat MVP** — Ejecutar US1 del piloto Spec Kit sobre la arquitectura de chat existente
+2. **Group voice controls** — Política administrativa, recepción personal y eventos auténticos
+3. **Notification read UX** — No marcar todo automáticamente al abrir; añadir acciones explícitas
+4. **Completar shares** — Box original compartida, Saved share y envío directo a contacto
+5. **Saved Collections backend** — Tabla, RLS y UI responsive
+6. **Ranking `For You` / `Loud`** — Diferenciar realmente los modos del feed
+7. **Admin panel + reportes/bloqueos** — Necesario antes del lanzamiento público
 
 ---
 

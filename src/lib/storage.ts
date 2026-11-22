@@ -41,6 +41,16 @@ export async function uploadCoverImage(file: File, userId: string): Promise<stri
   return data.publicUrl
 }
 
+export async function uploadStoryImage(file: File, userId: string): Promise<string> {
+  const err = validateImage(file, 'cover')
+  if (err) throw new Error(err.message)
+  const path = `${userId}/stories/${Date.now()}.${ext(file)}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
+  if (error) throw new Error('Failed to upload the story image.')
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return data.publicUrl
+}
+
 export async function uploadAvatarImage(file: File, userId: string): Promise<string> {
   const err = validateImage(file, 'avatar')
   if (err) throw new Error(err.message)

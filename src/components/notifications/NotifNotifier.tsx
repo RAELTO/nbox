@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../features/auth/AuthContext'
 
 /**
- * Propietario único del canal Realtime de notificaciones.
+ * Single owner of the Realtime notifications channel.
  * Mounted once in App.tsx to avoid duplicate channel conflicts.
  */
 export default function NotifNotifier() {
@@ -14,9 +14,9 @@ export default function NotifNotifier() {
   useEffect(() => {
     if (!user?.id) return
     const channel = supabase
-      .channel(`notif-notifier:${user.id}`)
+      .channel(`notif-notifier:${user.id}:${crypto.randomUUID()}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'notifications',
         filter: `recipient_id=eq.${user.id}`,
@@ -25,7 +25,10 @@ export default function NotifNotifier() {
         qc.invalidateQueries({ queryKey: ['notif-count', user.id] })
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      void channel.unsubscribe()
+      void supabase.removeChannel(channel)
+    }
   }, [user?.id, qc])
 
   return null
